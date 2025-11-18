@@ -1,0 +1,130 @@
+/* * Minimal CSS structure and mandatory styles for Task 0.
+ * You must expand this file to achieve a user-friendly and aesthetically pleasing design.
+ */
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 5%;
+    background-color: #008080; /* Teal/Turquoise color palette choice */
+    color: white;
+}
+
+.logo {
+    height: 40px; /* Adjust as needed for your logo image */
+}
+
+nav a {
+    color: white;
+    margin-left: 20px;
+    text-decoration: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+nav a:hover {
+    background-color: #006666;
+}
+
+.login-button {
+    border: 1px solid white;
+}
+
+footer {
+    text-align: center;
+    padding: 10px;
+    margin-top: 20px;
+    background-color: #333;
+    color: white;
+}
+
+/* --- FIXED PARAMETERS (MANDATORY) --- */
+.place-card, .review-card {
+    /* Margin: Use a margin of 20px */
+    margin: 20px;
+    /* Padding: Use a padding of 10px */
+    padding: 10px;
+    /* Border: Use a border of 1px solid #ddd */
+    border: 1px solid #ddd;
+    /* Border Radius: Use a border radius of 10px */
+    border-radius: 10px;
+    background-color: #fff;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.place-card {
+    margin-bottom: 20px;
+}
+
+.details-button {
+    display: inline-block;
+    background-color: #008080;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 5px;
+    text-decoration: none;
+    margin-top: 10px;
+}
+
+.form label {
+    display: block;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+.form input[type="email"], 
+.form input[type="password"],
+.form input[type="number"],
+.form textarea {
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box; /* Important for padding not to widen the element */
+}
+
+.form button[type="submit"] {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 15px;
+}
+
+/* Place Details Specifics */
+.place-details h1 {
+    color: #008080;
+    margin-top: 0;
+}
+.place-info {
+    margin-bottom: 5px;
+}
+
+/* Review Card Specifics */
+.review-card p:first-child {
+    font-weight: bold;
+    color: #555;
+}

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HBnB - List of Places</title>
+    <link rel="stylesheet" href="styles/style.css">
+    <link rel="icon" type="image/png" href="images/icon.png">
+</head>
+<body>
+    <header>
+        <img src="images/logo.png" alt="HBnB Logo" class="logo">
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="login.html" class="login-button" id="login-link">Login</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <section class="filter-section">
+            <h2>Filter Places</h2>
+            <label for="price-filter">Max Price Per Night ($):</label>
+            <select id="price-filter">
+                <option value="all">All</option>
+                <option value="10">Up to $10</option>
+                <option value="50">Up to $50</option>
+                <option value="100">Up to $100</option>
+            </select>
+        </section>
+
+        <section id="places-list">
+            <!-- Places will be dynamically populated here by JavaScript (Task 2). -->
+            <div class="place-card" data-price="50">
+                <h3>Cozy Beach Hut (Example)</h3>
+                <p><strong>Price:</strong> $<span class="price">50</span> / night</p>
+                <p>San Francisco, CA</p>
+                <a href="place.html?id=PLACE_ID_1" class="details-button">View Details</a>
+            </div>
+            
+            <div class="place-card" data-price="120">
+                <h3>Downtown Loft (Example)</h3>
+                <p><strong>Price:</strong> $<span class="price">120</span> / night</p>
+                <p>New York, NY</p>
+                <a href="place.html?id=PLACE_ID_2" class="details-button">View Details</a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; HBnB. All rights reserved.</p>
+    </footer>
+    <script src="scripts/scripts.js"></script>
+</body>
+</html>
