@@ -92,9 +92,8 @@ footer {
     width: 100%;
 }
 
-/* ADDED FIX: Apply general input styling specifically to the field inside the password container */
+/* FIX: Apply consistent input styling inside the password container */
 .password-container input {
-    /* Ensure the input inside the container uses the same styling structure */
     width: 100%;
     padding: 10px;
     margin-top: 5px;
@@ -134,7 +133,7 @@ footer {
     margin-top: 5px;
     border: 1px solid #ccc;
     border-radius: 5px;
-    box-sizing: border-box; 
+    box-sizing: border-box; /* Important for padding not to widen the element */
 }
 
 .form button[type="submit"] {

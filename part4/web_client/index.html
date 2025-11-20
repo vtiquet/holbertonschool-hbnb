@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HBnB - List of Places</title>
+    <title>HBnB - Home</title>
     <link rel="stylesheet" href="styles/style.css">
     <link rel="icon" type="image/png" href="images/icon.png">
 </head>
@@ -25,24 +25,16 @@
                 <option value="10">Up to $10</option>
                 <option value="50">Up to $50</option>
                 <option value="100">Up to $100</option>
+                <option value="500">Up to $500</option>
             </select>
         </section>
+        
+        <hr>
 
-        <section id="places-list">
-            <!-- Places will be dynamically populated here by JavaScript (Task 2). -->
-            <div class="place-card" data-price="50">
-                <h3>Cozy Beach Hut (Example)</h3>
-                <p><strong>Price:</strong> $<span class="price">50</span> / night</p>
-                <p>San Francisco, CA</p>
-                <a href="place.html?id=PLACE_ID_1" class="details-button">View Details</a>
-            </div>
-            
-            <div class="place-card" data-price="120">
-                <h3>Downtown Loft (Example)</h3>
-                <p><strong>Price:</strong> $<span class="price">120</span> / night</p>
-                <p>New York, NY</p>
-                <a href="place.html?id=PLACE_ID_2" class="details-button">View Details</a>
-            </div>
+        <section class="places-list-section">
+            <h2>Available Places</h2>
+            <div id="places-list">
+                </div>
         </section>
     </main>
 

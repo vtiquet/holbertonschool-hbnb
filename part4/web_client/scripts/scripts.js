@@ -46,7 +46,7 @@ function customAlert(message) {
     document.body.appendChild(alertBox);
 }
 
-// --- PASSWORD TOGGLE FUNCTION ---
+// --- PASSWORD TOGGLE FUNCTION (Task 1) ---
 
 function setupPasswordToggle() {
     const togglePassword = document.getElementById('togglePassword');
@@ -82,10 +82,9 @@ function setupLoginForm() {
         const password = document.getElementById('password').value;
         const errorMessage = document.getElementById('error-message');
         
-        if (errorMessage) errorMessage.textContent = ''; // Clear previous errors
+        if (errorMessage) errorMessage.textContent = ''; 
 
         try {
-            // Correctly targeting /api/v1/auth/login
             const LOGIN_ENDPOINT = `${API_BASE_URL}/auth/login`; 
 
             const response = await fetch(LOGIN_ENDPOINT, { 
@@ -98,15 +97,14 @@ function setupLoginForm() {
 
             if (response.ok) {
                 const data = await response.json();
-                // Store the JWT token in a cookie. path=/ ensures it's available across the entire site.
+                // Store the JWT token in a cookie.
                 document.cookie = `token=${data.access_token}; path=/; max-age=3600; Secure; SameSite=Lax`; 
                 window.location.href = 'index.html'; // Redirect on success
             } else {
-                // Handle non-200 responses (e.g., 401 Unauthorized)
                 const errorData = await response.json().catch(() => ({ message: 'Login failed: Unknown error.' }));
                 const message = errorData.message || response.statusText || 'Invalid email or password.';
                 if (errorMessage) errorMessage.textContent = message;
-                customAlert('Login failed: ' + message); // Display error
+                customAlert('Login failed: ' + message); 
             }
         } catch (error) {
             console.error('Login error:', error);
@@ -120,25 +118,29 @@ function setupLoginForm() {
 
 let allPlaces = []; // Global store for client-side filtering
 
+/**
+ * 1. Check User Authentication & Setup Logout Link
+ */
 function checkIndexAuthentication() {
     const token = getToken();
     const loginLink = document.getElementById('login-link');
     
     if (loginLink) {
         if (token) {
-            // Logged in: Change to Logout
+            // Authenticated: Change to Logout
             loginLink.textContent = 'Logout';
             loginLink.href = '#'; 
-            loginLink.removeEventListener('click', handleLogout); // Remove potential existing listener
+            loginLink.removeEventListener('click', handleLogout); 
             loginLink.addEventListener('click', handleLogout);
         } else {
-            // Not logged in: Show Login
+            // Not Authenticated: Show Login
             loginLink.textContent = 'Login';
             loginLink.href = 'login.html';
-            loginLink.removeEventListener('click', handleLogout); // Ensure logout listener is removed
+            loginLink.removeEventListener('click', handleLogout); 
         }
     }
     
+    // Always fetch places, passing the token if available
     fetchPlaces(token);
     setupPriceFilter();
 }
@@ -149,11 +151,16 @@ function handleLogout(event) {
     window.location.href = 'index.html'; // Reload to reflect status change
 }
 
+/**
+ * 2. Fetch Places Data
+ * @param {string|null} token - The JWT token for authentication.
+ */
 async function fetchPlaces(token) {
     const placesList = document.getElementById('places-list');
     if (!placesList) return;
     placesList.innerHTML = '<h2>Loading Places...</h2>';
     
+    // Prepare headers, including Authorization if token is present
     const headers = { 'Content-Type': 'application/json' };
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -164,9 +171,9 @@ async function fetchPlaces(token) {
 
         if (response.ok) {
             allPlaces = await response.json();
-            displayPlaces(allPlaces);
+            displayPlaces(allPlaces); // Populate the list
         } else {
-            placesList.innerHTML = `<h2>Failed to fetch places. Status: ${response.status}</h2>`;
+            placesList.innerHTML = `<h2>Failed to fetch places. Status: ${response.status}. Please check API logs.</h2>`;
             console.error('Failed to fetch places:', response.statusText);
         }
     } catch (error) {
@@ -175,13 +182,17 @@ async function fetchPlaces(token) {
     }
 }
 
+/**
+ * 3. Populate Places List
+ * @param {Array<Object>} places - Array of place objects from the API.
+ */
 function displayPlaces(places) {
     const placesList = document.getElementById('places-list');
     if (!placesList) return;
     placesList.innerHTML = ''; // Clear existing content
 
     if (places.length === 0) {
-        placesList.innerHTML = '<p>No places found matching the current filter.</p>';
+        placesList.innerHTML = '<p>No places found.</p>';
         return;
     }
 
@@ -200,6 +211,9 @@ function displayPlaces(places) {
     });
 }
 
+/**
+ * 4. Implement Client-Side Filtering
+ */
 function setupPriceFilter() {
     const priceFilter = document.getElementById('price-filter');
     if (!priceFilter) return;
@@ -211,6 +225,7 @@ function setupPriceFilter() {
         placeCards.forEach(card => {
             const placePrice = parseInt(card.dataset.price, 10);
             
+            // Check if 'All' is selected or if the place price is less than or equal to the selected max price
             if (maxPrice === 'all' || placePrice <= parseInt(maxPrice, 10)) {
                 card.style.display = 'block';
             } else {
