@@ -6,3 +6,5 @@ json
 app
 flask-bcrypt
 flask-jwt-extended
+flask_sqlalchemy
+flask_cors

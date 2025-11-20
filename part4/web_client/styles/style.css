@@ -86,6 +86,39 @@ footer {
     margin-top: 10px;
 }
 
+/* ADDED: Styles for Password Visibility Toggle */
+.password-container {
+    position: relative;
+    width: 100%;
+}
+
+/* ADDED FIX: Apply general input styling specifically to the field inside the password container */
+.password-container input {
+    /* Ensure the input inside the container uses the same styling structure */
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+/* Eye icon styling */
+#togglePassword {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #888;
+    z-index: 10; /* Ensure the icon is always above the input field */
+}
+
+#togglePassword:hover {
+    color: #333;
+}
+/* END ADDED STYLES */
+
 .form label {
     display: block;
     margin-top: 10px;
@@ -101,7 +134,7 @@ footer {
     margin-top: 5px;
     border: 1px solid #ccc;
     border-radius: 5px;
-    box-sizing: border-box; /* Important for padding not to widen the element */
+    box-sizing: border-box; 
 }
 
 .form button[type="submit"] {

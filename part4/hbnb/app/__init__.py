@@ -12,6 +12,7 @@ from flask_jwt_extended.exceptions import NoAuthorizationError
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 from flask_sqlalchemy import SQLAlchemy
 from config import DevelopmentConfig
+from flask_cors import CORS
 
 # ========================================
 # Initialize Flask extensions (before app creation)
@@ -39,6 +40,8 @@ def create_app(config_class=DevelopmentConfig):
     bcrypt.init_app(app)
     jwt.init_app(app)
     db.init_app(app)
+
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
 
     # ========================================
     # Create database tables (development only)

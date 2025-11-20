@@ -1,5 +1,4 @@
-// Base URL for your API - !!! REPLACE THIS WITH YOUR ACTUAL API BASE URL !!!
-const API_BASE_URL = 'https://your-api-url/api/v1';
+const API_BASE_URL = 'http://127.0.0.1:5000/api/v1';
 
 // --- HELPER FUNCTIONS ---
 
@@ -9,8 +8,8 @@ const API_BASE_URL = 'https://your-api-url/api/v1';
  * @returns {string|null} The cookie value or null if not found.
  */
 function getCookie(name) {
-    const value = \`; \${document.cookie}\`;
-    const parts = value.split(\`; \${name}=\`);
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
     if (parts.length === 2) return parts.pop().split(';').shift();
     return null;
 }
@@ -38,13 +37,32 @@ function getToken() {
  */
 function customAlert(message) {
     const alertBox = document.createElement('div');
-    alertBox.style.cssText = \`
+    alertBox.style.cssText = `
         position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
         padding: 20px; background: #fff; border: 2px solid #333; border-radius: 10px;
         box-shadow: 0 4px 8px rgba(0,0,0,0.2); z-index: 1000;
-    \`;
-    alertBox.innerHTML = \`<p>\${message}</p><button onclick="this.parentNode.remove()">OK</button>\`;
+    `;
+    alertBox.innerHTML = `<p>${message}</p><button onclick="this.parentNode.remove()">OK</button>`;
     document.body.appendChild(alertBox);
+}
+
+// --- PASSWORD TOGGLE FUNCTION ---
+
+function setupPasswordToggle() {
+    const togglePassword = document.getElementById('togglePassword');
+    const password = document.getElementById('password');
+
+    if (togglePassword && password) {
+        togglePassword.addEventListener('click', function () {
+            // Toggle the type attribute
+            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+            password.setAttribute('type', type);
+            
+            // Toggle the eye icon class
+            this.classList.toggle('fa-eye');
+            this.classList.toggle('fa-eye-slash');
+        });
+    }
 }
 
 
@@ -53,6 +71,9 @@ function customAlert(message) {
 function setupLoginForm() {
     const loginForm = document.getElementById('login-form');
     if (!loginForm) return;
+
+    // Initialize the password toggle function
+    setupPasswordToggle(); 
 
     loginForm.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -64,8 +85,10 @@ function setupLoginForm() {
         if (errorMessage) errorMessage.textContent = ''; // Clear previous errors
 
         try {
-            // Note: The login endpoint is usually /login or /auth/login
-            const response = await fetch(\`\${API_BASE_URL.replace('/v1', '')}/login\`, { 
+            // Correctly targeting /api/v1/auth/login
+            const LOGIN_ENDPOINT = `${API_BASE_URL}/auth/login`; 
+
+            const response = await fetch(LOGIN_ENDPOINT, { 
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -75,19 +98,20 @@ function setupLoginForm() {
 
             if (response.ok) {
                 const data = await response.json();
-                // Store the JWT token in a cookie
-                document.cookie = \`token=\${data.access_token}; path=/; max-age=3600; Secure; SameSite=Lax\`; // max-age=1 hour
-                window.location.href = 'index.html'; // Redirect to main page
+                // Store the JWT token in a cookie. path=/ ensures it's available across the entire site.
+                document.cookie = `token=${data.access_token}; path=/; max-age=3600; Secure; SameSite=Lax`; 
+                window.location.href = 'index.html'; // Redirect on success
             } else {
+                // Handle non-200 responses (e.g., 401 Unauthorized)
                 const errorData = await response.json().catch(() => ({ message: 'Login failed: Unknown error.' }));
                 const message = errorData.message || response.statusText || 'Invalid email or password.';
                 if (errorMessage) errorMessage.textContent = message;
-                customAlert('Login failed: ' + message);
+                customAlert('Login failed: ' + message); // Display error
             }
         } catch (error) {
             console.error('Login error:', error);
-            if (errorMessage) errorMessage.textContent = 'A network error occurred.';
-            customAlert('A network error occurred.');
+            if (errorMessage) errorMessage.textContent = 'A network error occurred. Check console for details.';
+            customAlert('A network error occurred. (CORS issue is common here)');
         }
     });
 }
@@ -132,21 +156,21 @@ async function fetchPlaces(token) {
     
     const headers = { 'Content-Type': 'application/json' };
     if (token) {
-        headers['Authorization'] = \`Bearer \${token}\`;
+        headers['Authorization'] = `Bearer ${token}`;
     }
 
     try {
-        const response = await fetch(\`\${API_BASE_URL}/places\`, { headers });
+        const response = await fetch(`${API_BASE_URL}/places`, { headers });
 
         if (response.ok) {
             allPlaces = await response.json();
             displayPlaces(allPlaces);
         } else {
-            placesList.innerHTML = \`<h2>Failed to fetch places. Status: \${response.status}</h2>\`;
+            placesList.innerHTML = `<h2>Failed to fetch places. Status: ${response.status}</h2>`;
             console.error('Failed to fetch places:', response.statusText);
         }
     } catch (error) {
-        placesList.innerHTML = \`<h2>A network error occurred. Please ensure the API is running and CORS is configured.</h2>\`;
+        placesList.innerHTML = `<h2>A network error occurred. Please ensure the API is running and CORS is configured.</h2>`;
         console.error('Network error during fetch places:', error);
     }
 }
@@ -166,12 +190,12 @@ function displayPlaces(places) {
         placeCard.className = 'place-card';
         placeCard.dataset.price = place.price_per_night; // Store price for filtering
         
-        placeCard.innerHTML = \`
-            <h3>\${place.name}</h3>
-            <p><strong>Price:</strong> $<span class="price">\${place.price_per_night}</span> / night</p>
-            <p>Location: \${place.city_id || 'Unknown City'}</p>
-            <a href="place.html?id=\${place.id}" class="details-button">View Details</a>
-        \`;
+        placeCard.innerHTML = `
+            <h3>${place.name}</h3>
+            <p><strong>Price:</strong> $<span class="price">${place.price_per_night}</span> / night</p>
+            <p>Location: ${place.city_id || 'Unknown City'}</p>
+            <a href="place.html?id=${place.id}" class="details-button">View Details</a>
+        `;
         placesList.appendChild(placeCard);
     });
 }
@@ -214,7 +238,7 @@ function setupPlaceDetails() {
         // Authenticated: Show button and link it to the review form
         if (addReviewSection) addReviewSection.style.display = 'block';
         if (addReviewButton) {
-            addReviewButton.href = \`add_review.html?place_id=\${placeId}\`;
+            addReviewButton.href = `add_review.html?place_id=${placeId}`;
         }
     } else {
         // Not authenticated: Hide add review section
@@ -231,23 +255,23 @@ async function fetchPlaceDetails(token, placeId) {
     
     const headers = { 'Content-Type': 'application/json' };
     if (token) {
-        headers['Authorization'] = \`Bearer \${token}\`;
+        headers['Authorization'] = `Bearer ${token}`;
     }
     
     try {
         // Fetch Place Details
-        const placeResponse = await fetch(\`\${API_BASE_URL}/places/\${placeId}\`, { headers });
+        const placeResponse = await fetch(`${API_BASE_URL}/places/${placeId}`, { headers });
         if (!placeResponse.ok) throw new Error('Failed to fetch place details.');
         const place = await placeResponse.json();
 
         // Fetch Reviews
-        const reviewsResponse = await fetch(\`\${API_BASE_URL}/places/\${placeId}/reviews\`, { headers });
+        const reviewsResponse = await fetch(`${API_BASE_URL}/places/${placeId}/reviews`, { headers });
         const reviews = reviewsResponse.ok ? await reviewsResponse.json() : [];
 
         displayPlaceDetails(place, reviews);
 
     } catch (error) {
-        detailsSection.innerHTML = \`<h2>Error fetching data: \${error.message}</h2>\`;
+        detailsSection.innerHTML = `<h2>Error fetching data: ${error.message}</h2>`;
         console.error('Details fetch error:', error);
     }
 }
@@ -257,34 +281,34 @@ function displayPlaceDetails(place, reviews) {
     if (!detailsSection) return;
     detailsSection.innerHTML = ''; // Clear loading message
 
-    const amenitiesList = (place.amenities || []).map(a => \`<li>\${a.name || a.id}</li>\`).join('');
+    const amenitiesList = (place.amenities || []).map(a => `<li>${a.name || a.id}</li>`).join('');
 
-    const reviewsHtml = reviews.length > 0 ? reviews.map(review => \`
+    const reviewsHtml = reviews.length > 0 ? reviews.map(review => `
         <div class="review-card">
-            <p><strong>User ID:</strong> \${review.user_id || 'N/A'}</p>
-            <p><strong>Rating:</strong> \${review.rating}/5</p>
-            <p>\${review.text}</p>
+            <p><strong>User ID:</strong> ${review.user_id || 'N/A'}</p>
+            <p><strong>Rating:</strong> ${review.rating}/5</p>
+            <p>${review.text}</p>
         </div>
-    \`).join('') : '<p>No reviews yet for this place. Be the first to add one!</p>';
+    `).join('') : '<p>No reviews yet for this place. Be the first to add one!</p>';
 
-    const placeDetailsHTML = \`
+    const placeDetailsHTML = `
         <article class="place-details">
-            <h1>\${place.name}</h1>
-            <p class="place-info"><strong>Location:</strong> \${place.city_id || 'Unknown City'}</p>
-            <p class="place-info"><strong>Host:</strong> \${place.host_id || 'Unknown Host'}</p>
-            <p class="place-info"><strong>Price per Night:</strong> $\${place.price_per_night}</p>
-            <p class="place-info"><strong>Max Guests:</strong> \${place.max_guest}</p>
-            <p class="place-info"><strong>Description:</strong> \${place.description}</p>
+            <h1>${place.name}</h1>
+            <p class="place-info"><strong>Location:</strong> ${place.city_id || 'Unknown City'}</p>
+            <p class="place-info"><strong>Host:</strong> ${place.host_id || 'Unknown Host'}</p>
+            <p class="place-info"><strong>Price per Night:</strong> $${place.price_per_night}</p>
+            <p class="place-info"><strong>Max Guests:</strong> ${place.max_guest}</p>
+            <p class="place-info"><strong>Description:</strong> ${place.description}</p>
             
             <h3>Amenities</h3>
-            <ul>\${amenitiesList}</ul>
+            <ul>${amenitiesList}</ul>
 
             <hr>
             
             <h2>Reviews</h2>
-            <section id="reviews-list">\${reviewsHtml}</section>
+            <section id="reviews-list">${reviewsHtml}</section>
         </article>
-    \`;
+    `;
     detailsSection.innerHTML = placeDetailsHTML;
 }
 
@@ -309,7 +333,7 @@ function setupReviewForm() {
     
     // Update the header to show which place is being reviewed
     const placeIdDisplay = document.getElementById('place-id-display');
-    if (placeIdDisplay) placeIdDisplay.textContent = \`Add a Review for Place ID: \${placeId}\`;
+    if (placeIdDisplay) placeIdDisplay.textContent = `Add a Review for Place ID: ${placeId}`;
 
     // 2. Setup Event Listener
     if (reviewForm) {
@@ -335,11 +359,11 @@ async function submitReview(token, placeId, reviewText, rating) {
 
     const headers = {
         'Content-Type': 'application/json',
-        'Authorization': \`Bearer \${token}\`
+        'Authorization': `Bearer ${token}`
     };
 
     try {
-        const response = await fetch(\`\${API_BASE_URL}/places/\${placeId}/reviews\`, {
+        const response = await fetch(`${API_BASE_URL}/places/${placeId}/reviews`, {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(reviewData)
@@ -351,13 +375,13 @@ async function submitReview(token, placeId, reviewText, rating) {
             if (feedbackMessage) feedbackMessage.textContent = 'Success! Review submitted.';
             // Redirect back to the place details page after submission
             setTimeout(() => {
-                window.location.href = \`place.html?id=\${placeId}\`;
+                window.location.href = `place.html?id=${placeId}`;
             }, 1500);
         } else {
             const errorData = await response.json().catch(() => ({ message: 'Failed to submit review: Unknown error.' }));
             const message = errorData.message || response.statusText || 'Failed to submit review.';
-            customAlert(\`Failed to submit review: \${message}\`);
-            if (feedbackMessage) feedbackMessage.textContent = \`Error: \${message}\`;
+            customAlert(`Failed to submit review: ${message}`);
+            if (feedbackMessage) feedbackMessage.textContent = `Error: ${message}`;
         }
     } catch (error) {
         console.error('Review submission error:', error);
