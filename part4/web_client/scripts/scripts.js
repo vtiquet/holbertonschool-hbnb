@@ -39,10 +39,64 @@ function customAlert(message) {
     const alertBox = document.createElement('div');
     alertBox.style.cssText = `
         position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-        padding: 20px; background: #fff; border: 2px solid #333; border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2); z-index: 1000;
+        padding: 0; background: #fff; border: 2px solid #ccc; border-radius: 10px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.3); z-index: 1000;
+        width: 300px; overflow: hidden; font-family: Arial, sans-serif;
     `;
-    alertBox.innerHTML = `<p>${message}</p><button onclick="this.parentNode.remove()">OK</button>`;
+    
+    // Header for the alert (using theme color)
+    const header = document.createElement('div');
+    header.style.cssText = `
+        background-color: #008080; /* Teal/Turquoise theme color */
+        color: white;
+        padding: 10px 20px;
+        font-weight: bold;
+    `;
+    header.textContent = 'Notification';
+
+    // Body for the message
+    const body = document.createElement('div');
+    body.style.cssText = `
+        padding: 20px;
+        text-align: center;
+        color: #333;
+    `;
+    body.innerHTML = `<p>${message}</p>`;
+
+    // Footer for the button
+    const footer = document.createElement('div');
+    footer.style.cssText = `
+        padding: 10px 20px;
+        text-align: center;
+        border-top: 1px solid #eee;
+    `;
+    
+    const button = document.createElement('button');
+    button.textContent = 'OK';
+    button.style.cssText = `
+        background-color: #008080;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    `;
+    
+    // Add hover effects for better UX
+    button.onmouseover = () => button.style.backgroundColor = '#006666';
+    button.onmouseout = () => button.style.backgroundColor = '#008080';
+    
+    button.onclick = function() {
+        // Remove the alert box when OK is clicked
+        this.closest('div').parentNode.remove();
+    };
+
+    footer.appendChild(button);
+    alertBox.appendChild(header);
+    alertBox.appendChild(body);
+    alertBox.appendChild(footer);
+    
     document.body.appendChild(alertBox);
 }
 
@@ -96,20 +150,19 @@ function setupLoginForm() {
             });
 
             if (response.ok) {
-                const data = await response.json();
-                // Store the JWT token in a cookie.
-                document.cookie = `token=${data.access_token}; path=/; max-age=3600; Secure; SameSite=Lax`; 
-                window.location.href = 'index.html'; // Redirect on success
+                // ... (Success logic) ...
             } else {
-                const errorData = await response.json().catch(() => ({ message: 'Login failed: Unknown error.' }));
+                // If CORS is fixed, this block handles the 401/400 (incorrect password)
+                const errorData = await response.json().catch(() => ({ message: 'Login failed: Unknown error or non-JSON response.' }));
                 const message = errorData.message || response.statusText || 'Invalid email or password.';
                 if (errorMessage) errorMessage.textContent = message;
-                customAlert('Login failed: ' + message); 
+                customAlert('Login failed: ' + message); // Use the new styled alert
             }
         } catch (error) {
             console.error('Login error:', error);
             if (errorMessage) errorMessage.textContent = 'A network error occurred. Check console for details.';
-            customAlert('A network error occurred. (CORS issue is common here)');
+            // This is the message you are currently seeing:
+            customAlert('A network error occurred. Please ensure your API is running and CORS is configured correctly.');
         }
     });
 }

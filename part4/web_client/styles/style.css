@@ -50,6 +50,21 @@ nav a:hover {
     border: 1px solid white;
 }
 
+.login-form-section {
+    max-width: 400px; 
+    margin: 40px auto; 
+    padding: 20px;
+    border: 1px solid #ccc; /* <-- REMOVE/COMMENT OUT */
+    border-radius: 8px;    /* <-- REMOVE/COMMENT OUT */
+    background-color: #f9f9f9; /* <-- REMOVE/CHANGE THIS */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* <-- REMOVE/COMMENT OUT */
+}
+
+/* Ensure the form inside the section also fits this width */
+.login-form-section .form {
+    width: 100%; /* Take up the full width of the constrained section */
+}
+
 footer {
     text-align: center;
     padding: 10px;
