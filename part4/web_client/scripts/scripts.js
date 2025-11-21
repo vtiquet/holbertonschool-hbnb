@@ -150,18 +150,35 @@ function setupLoginForm() {
             });
 
             if (response.ok) {
-                // ... (Success logic) ...
+                // --- CRITICAL SUCCESS LOGIC ---
+                const data = await response.json();
+                const token = data.token; // Assume the API sends { "token": "..." }
+
+                if (token) {
+                    // 1. Store the token as a cookie (Requirement)
+                    // Set cookie to expire in 7 days (standard practice)
+                    document.cookie = `token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; secure; samesite=Lax`;
+                    
+                    // 2. Redirect to the home page (Requirement)
+                    window.location.href = 'index.html';
+                } else {
+                    // Handle case where API succeeds but sends no token
+                    customAlert('Login successful, but no token received from the API.');
+                }
+                // --- END CRITICAL SUCCESS LOGIC ---
+
             } else {
-                // If CORS is fixed, this block handles the 401/400 (incorrect password)
-                const errorData = await response.json().catch(() => ({ message: 'Login failed: Unknown error or non-JSON response.' }));
+                // Handle failed login (401 Unauthorized, 400 Bad Request, etc.)
+                const errorData = await response.json().catch(() => ({ message: 'Login failed: Unknown error.' }));
                 const message = errorData.message || response.statusText || 'Invalid email or password.';
+                
                 if (errorMessage) errorMessage.textContent = message;
-                customAlert('Login failed: ' + message); // Use the new styled alert
+                customAlert('Login failed: ' + message);
             }
         } catch (error) {
+            // This is the network error/CORS error catch
             console.error('Login error:', error);
             if (errorMessage) errorMessage.textContent = 'A network error occurred. Check console for details.';
-            // This is the message you are currently seeing:
             customAlert('A network error occurred. Please ensure your API is running and CORS is configured correctly.');
         }
     });
