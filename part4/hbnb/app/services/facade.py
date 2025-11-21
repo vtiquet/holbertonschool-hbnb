@@ -122,35 +122,9 @@ class HBnBFacade:
         if not name:
             raise ValueError("Amenity name is required")
         
-        place_id = amenity_data.get("place_id")
-        owner_id = amenity_data.get("owner_id")
-        
-        # Validate place exists if provided
-        if place_id:
-            place = self.place_repo.get(place_id)
-            if not place:
-                raise ValueError(f"Place with id '{place_id}' not found")
-        
-        # Validate owner exists if provided
-        if owner_id:
-            owner = self.user_repo.get(owner_id)
-            if not owner:
-                raise ValueError(f"Owner with id '{owner_id}' not found")
-        
-        amenity = Amenity(
-            name=name,
-            place_id=place_id,
-            owner_id=owner_id
-        )
+        amenity = Amenity(name=name)
         
         self.amenity_repo.add(amenity)
-        
-        # Associate amenity with place if place_id provided
-        if place_id:
-            place = self.place_repo.get(place_id)
-            if place and amenity not in place.amenities:
-                place.amenities.append(amenity)
-                db.session.commit()
         
         return amenity
 
@@ -173,30 +147,12 @@ class HBnBFacade:
         if not amenity:
             return None
         
-        # Prevent updating immutable fields
         for field in ['id', 'created_at']:
             if field in amenity_data:
                 raise ValueError(f"Cannot update '{field}'")
         
-        old_place_id = amenity.place_id
-        new_place_id = amenity_data.get('place_id')
-        
-        amenity.update(amenity_data)
-        
-        # Update place associations if place_id changed
-        if new_place_id and new_place_id != old_place_id:
-            # Remove from old place
-            if old_place_id:
-                old_place = self.place_repo.get(old_place_id)
-                if old_place and amenity in old_place.amenities:
-                    old_place.amenities.remove(amenity)
-            
-            # Add to new place
-            new_place = self.place_repo.get(new_place_id)
-            if new_place and amenity not in new_place.amenities:
-                new_place.amenities.append(amenity)
-            
-            db.session.commit()
+        if 'name' in amenity_data:
+            amenity.update({'name': amenity_data['name']})
         
         return amenity
 
@@ -210,13 +166,7 @@ class HBnBFacade:
         if not amenity:
             return False
         
-        # Remove amenity from place if associated
-        if amenity.place_id:
-            place = self.place_repo.get(amenity.place_id)
-            if place and amenity in place.amenities:
-                place.amenities.remove(amenity)
-                db.session.commit()
-        
+        # SQLAlchemy cascade will handle removal from place_amenity table
         self.amenity_repo.delete(amenity_id)
         return True
 

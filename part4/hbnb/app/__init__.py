@@ -11,8 +11,8 @@ from flask_jwt_extended import JWTManager
 from flask_jwt_extended.exceptions import NoAuthorizationError
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 from flask_sqlalchemy import SQLAlchemy
-from config import DevelopmentConfig
 from flask_cors import CORS
+from config import DevelopmentConfig
 
 # ========================================
 # Initialize Flask extensions (before app creation)
@@ -33,6 +33,22 @@ def create_app(config_class=DevelopmentConfig):
     """
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    # ========================================
+    # ⭐ CONFIGURE CORS - AJOUTEZ CES LIGNES ICI ⭐
+    # ========================================
+    CORS(app, resources={
+        r"/api/*": {
+            "origins": [
+                "http://localhost:8000",
+                "http://127.0.0.1:8000",
+                "http://localhost:3000",
+                "http://127.0.0.1:3000"
+            ],
+            "methods": ["GET", "POST", "PUT", "DELETE"],
+            "allow_headers": ["Content-Type", "Authorization"]
+        }
+    })
     
     # ========================================
     # Initialize extensions with app context
@@ -40,8 +56,6 @@ def create_app(config_class=DevelopmentConfig):
     bcrypt.init_app(app)
     jwt.init_app(app)
     db.init_app(app)
-
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
 
     # ========================================
     # Create database tables (development only)
@@ -185,7 +199,7 @@ def create_app(config_class=DevelopmentConfig):
     # Add namespaces to API with URL prefixes
     api.add_namespace(users_ns, path='/api/v1/users')
     api.add_namespace(places_ns, path='/api/v1/places')
-    api.add_namespace(reviews_ns, path='/api/v1/reviews')
+    api.add_namespace(reviews_ns, path='/api/v1')
     api.add_namespace(amenities_ns, path='/api/v1/amenities')
     api.add_namespace(auth_ns, path='/api/v1/auth')
 

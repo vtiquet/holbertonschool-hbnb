@@ -72,6 +72,12 @@ review_model = reviews_ns.model('ReviewInput', {
     )
 })
 
+# Modèle pour la création via /places/<place_id>/reviews
+review_create_model = reviews_ns.model('ReviewCreate', {
+    'text': fields.String(required=True, min_length=10, description='Review comment (min 10 characters)'),
+    'rating': fields.Integer(required=True, min=1, max=5, description='Rating (1-5 stars)')
+})
+
 # Response model for review data
 review_response_model = reviews_ns.model('ReviewResponse', {
     'id': fields.String(description='Unique review identifier (UUID)'),
@@ -427,3 +433,78 @@ class PlaceReviewList(Resource):
 
         # SQLAlchemy automatically loads user and place for each review
         return [r.to_dict() for r in reviews]
+    
+    @jwt_required()
+    @reviews_ns.expect(review_create_model, validate=True)
+    @reviews_ns.response(201, 'Review successfully created', review_response_model)
+    @reviews_ns.response(400, 'Invalid input data')
+    @reviews_ns.response(403, 'Unauthorized - Cannot review own place')
+    @reviews_ns.response(404, 'Place not found')
+    @reviews_ns.response(409, 'Conflict - User has already reviewed this place')
+    def post(self, place_id):
+        """
+        Create a new review for a specific place.
+        
+        This endpoint creates a review directly under the place resource.
+        The place_id is taken from the URL instead of the request body.
+        
+        Protection rules:
+        - User must be authenticated (JWT token required)
+        - User cannot review their own place
+        - User can only leave one review per place
+        
+        Args:
+            place_id (str): UUID of the place to review (from URL)
+            
+        Returns:
+            201: Review created successfully
+            400: Invalid input (validation errors)
+            403: Forbidden (trying to review own place)
+            404: Place does not exist
+            409: User has already reviewed this place
+        """
+        # Get the authenticated user's ID from the JWT token
+        current_user_id = get_jwt_identity()
+        
+        try:
+            # Extract review data from request body
+            review_data = reviews_ns.payload
+            
+            # Override place_id with the one from the URL
+            review_data['place_id'] = place_id
+            
+            # Set user_id to the authenticated user
+            review_data['user_id'] = current_user_id
+            
+            # Verify the place exists and get its details
+            place = facade_instance.get_place(place_id)
+            if not place:
+                reviews_ns.abort(404, 'Place not found')
+            
+            # Business rule: Users cannot review their own places
+            if place.owner_id == current_user_id:
+                reviews_ns.abort(403, 'You cannot review your own place')
+            
+            # Business rule: One review per user per place
+            if facade_instance.user_has_reviewed_place(current_user_id, place_id):
+                reviews_ns.abort(409, 'You have already reviewed this place')
+            
+            # Create the review in the database
+            review = facade_instance.create_review(review_data)
+            
+            return review.to_dict(), 201
+        
+        except HTTPException:
+            raise
+        except ValueError as e:
+            reviews_ns.abort(400, str(e))
+        except Exception as e:
+            import traceback
+            print("=" * 80)
+            print("ERROR in POST /places/<place_id>/reviews:")
+            print(f"Exception type: {type(e).__name__}")
+            print(f"Exception message: {str(e)}")
+            print("Full traceback:")
+            traceback.print_exc()
+            print("=" * 80)
+            reviews_ns.abort(500, f"Internal error: {str(e)}")

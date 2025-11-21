@@ -15,7 +15,7 @@ Routes:
 Each place includes:
 - Basic information (title, description, price, location)
 - Owner information (user who created the place)
-- Amenities (features like WiFi, Parking, Pool)
+- Amenities (features like WiFi, Parking, Pool) - selected from global amenities
 - Reviews (ratings and comments from users)
 """
 
@@ -86,6 +86,11 @@ place_model = places_ns.model('PlaceInput', {
         description='UUID of the user creating the place (must match authenticated user)',
         example='abc-123-def-456'
     ),
+    'amenities': fields.List(
+        fields.String,
+        description='List of amenity IDs to associate with this place (must exist in the system)',
+        example=['amenity-uuid-1', 'amenity-uuid-2']
+    )
 })
 
 # Response model for place data (includes all relationships)
@@ -116,6 +121,11 @@ place_update_model = places_ns.model('PlaceUpdateInput', {
     'price': fields.Float(description='New price per night'),
     'latitude': fields.Float(description='New latitude coordinate'),
     'longitude': fields.Float(description='New longitude coordinate'),
+    'amenities': fields.List(
+        fields.String,
+        description='Updated list of amenity IDs (replaces existing amenities)',
+        example=['amenity-uuid-1', 'amenity-uuid-3']
+    )
 })
 
 
@@ -136,7 +146,7 @@ class PlaceList(Resource):
     @jwt_required()  # Requires valid JWT token
     @places_ns.expect(place_model, validate=True)
     @places_ns.response(201, 'Place registered successfully', place_response)
-    @places_ns.response(400, 'Invalid input data')
+    @places_ns.response(400, 'Invalid input data or amenity does not exist')
     @places_ns.response(403, 'Unauthorized - owner_id must match authenticated user')
     def post(self):
         """
@@ -146,15 +156,16 @@ class PlaceList(Resource):
         - User must be authenticated (JWT token required)
         - The owner_id in the request must match the authenticated user's ID
         - Users can only create places for themselves (not for others)
+        - Amenities must exist in the system (created by admins)
         
         The place will be created with:
-        - Empty amenities list (amenities added separately)
+        - Selected amenities (optional, must be valid UUIDs of existing amenities)
         - Empty reviews list (reviews added by other users)
         - Automatic timestamps (created_at, updated_at)
         
         Returns:
             201: Place created successfully with full place data
-            400: Invalid input (validation errors)
+            400: Invalid input (validation errors or non-existent amenity)
             403: owner_id doesn't match authenticated user
         """
         # Get the authenticated user's ID from the JWT token
@@ -168,6 +179,21 @@ class PlaceList(Resource):
             # This prevents users from creating places in someone else's name
             if place_data.get('owner_id') != current_user_id:
                 places_ns.abort(403, 'You can only create places for yourself')
+            
+            # Validate amenities if provided
+            if 'amenities' in place_data and place_data['amenities']:
+                # Get all existing amenities from the database
+                existing_amenities = facade_instance.get_all_amenities()
+                existing_amenity_ids = [a.id for a in existing_amenities]
+                
+                # Check each amenity ID
+                for amenity_id in place_data['amenities']:
+                    if amenity_id not in existing_amenity_ids:
+                        places_ns.abort(
+                            400, 
+                            f'Amenity with ID {amenity_id} does not exist. '
+                            f'Please select from existing amenities or contact an admin to create new ones.'
+                        )
             
             # Create the place in the database
             place = facade_instance.create_place(place_data)
@@ -256,7 +282,7 @@ class PlaceResource(Resource):
     @jwt_required()  # Requires valid JWT token
     @places_ns.expect(place_update_model, validate=True)
     @places_ns.response(200, 'Place updated successfully', place_response)
-    @places_ns.response(400, 'Invalid input data')
+    @places_ns.response(400, 'Invalid input data or amenity does not exist')
     @places_ns.response(403, 'Unauthorized - Only owner or admin can update')
     @places_ns.response(404, 'Place not found')
     def put(self, place_id):
@@ -268,18 +294,25 @@ class PlaceResource(Resource):
         - User must be either:
           * The owner of the place
           * An admin user
+        - Amenities must exist in the system (if updating amenities)
         
         Restricted fields (cannot be updated):
         - id (immutable)
         - owner_id (cannot transfer ownership)
         - created_at (immutable timestamp)
         
+        Amenities behavior:
+        - If 'amenities' field is provided, it REPLACES all existing amenities
+        - Each amenity ID must exist in the system
+        - To remove all amenities, send an empty list: "amenities": []
+        - To keep existing amenities unchanged, don't include the 'amenities' field
+        
         Args:
             place_id (str): UUID of the place to update
             
         Returns:
             200: Place updated successfully with updated data
-            400: Invalid input data
+            400: Invalid input data or non-existent amenity
             403: User is not authorized to update this place
             404: Place not found
         """
@@ -302,6 +335,21 @@ class PlaceResource(Resource):
         try:
             # Extract update data from request body
             place_data = request.get_json()
+            
+            # Validate amenities if provided in the update
+            if 'amenities' in place_data:
+                # Get all existing amenities from the database
+                existing_amenities = facade_instance.get_all_amenities()
+                existing_amenity_ids = [a.id for a in existing_amenities]
+                
+                # Check each amenity ID
+                for amenity_id in place_data['amenities']:
+                    if amenity_id not in existing_amenity_ids:
+                        places_ns.abort(
+                            400, 
+                            f'Amenity with ID {amenity_id} does not exist. '
+                            f'Please select from existing amenities or contact an admin.'
+                        )
             
             # Update the place in the database
             # The facade will handle validation and prevent updating restricted fields
@@ -333,7 +381,7 @@ class PlaceResource(Resource):
         
         Cascade behavior:
         - SQLAlchemy will automatically delete all associated reviews
-        - Amenities are NOT deleted (they may be shared with other places)
+        - Amenities are NOT deleted (they are global resources shared across places)
         - The relationship entries in place_amenity table are removed
         
         Args:
