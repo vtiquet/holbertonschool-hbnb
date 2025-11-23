@@ -8,14 +8,14 @@ such as WiFi, Pool, Parking, Air Conditioning, etc.
 
 Database schema:
 - Primary key: id (inherited from BaseModel, UUID)
-- Unique constraint: None (multiple places can have the same amenity name)
-- Foreign keys: place_id, owner_id
-- Relationships: owner (User), place (Place), places (Many-to-Many)
+- Unique constraint: name (to avoid duplicates)
+- Foreign keys: None (amenities are global resources)
+- Relationships: places (Many-to-Many via place_amenity table)
 
 Business rules:
-- Amenity name is required and must be non-empty
-- Name can be duplicated (e.g., multiple "WiFi" amenities for different places)
-- Optional ownership tracking (owner_id can be null)
+- Amenity name is required and must be unique
+- Only admins can create/update/delete amenities
+- Owners select from existing amenities when creating places
 """
 
 from app import db
@@ -25,7 +25,7 @@ from sqlalchemy.orm import validates
 
 class Amenity(BaseModel):
     """
-    Amenity model representing place features/services.
+    Amenity model representing global place features/services.
     
     Inherits from BaseModel which provides:
     - id (UUID primary key)
@@ -33,13 +33,9 @@ class Amenity(BaseModel):
     - updated_at (timestamp)
     
     Attributes:
-        name (str): Name of the amenity (e.g., "WiFi", "Pool", "Parking")
-        place_id (str): Optional UUID of the associated place (legacy field)
-        owner_id (str): Optional UUID of the user who created this amenity
+        name (str): Unique name of the amenity (e.g., "WiFi", "Pool", "Parking")
         
     Relationships:
-        owner (User): The user who created this amenity (optional)
-        place (Place): Direct relationship to a single place (legacy, rarely used)
         places (List[Place]): Many-to-Many relationship with places via place_amenity table
     """
     
@@ -49,56 +45,22 @@ class Amenity(BaseModel):
     # Database Columns
     # -----------------------
     
-    # Amenity name (not unique - multiple places can have "WiFi")
+    # Amenity name - UNIQUE to avoid duplicates
     name = db.Column(
         db.String(255), 
         nullable=False,  # Required field
-        unique=False,    # Allows duplicates (e.g., multiple "WiFi" amenities)
-    )
-    
-    # Optional foreign key to a specific place (legacy field, rarely used)
-    place_id = db.Column(
-        db.String(36),                     # UUID format
-        db.ForeignKey('places.id'),        # References places table
-        nullable=True,                     # Optional relationship
-        index=True                         # Index for joins
-    )
-    
-    # Optional foreign key to track who created the amenity
-    owner_id = db.Column(
-        db.String(36),                     # UUID format
-        db.ForeignKey('users.id'),         # References users table
-        nullable=True,                     # Optional relationship
-        index=True                         # Index for joins
+        unique=True,     # Only one "WiFi" amenity in the entire system
+        index=True       # Index for fast lookups
     )
     
     # -----------------------
     # Relationships
     # -----------------------
     
-    # One-to-Many: User can own multiple amenities
-    # backref creates 'owned_amenities' attribute on User model
-    # lazy='subquery' loads owner data in a single query for better performance
-    owner = db.relationship(
-        'User', 
-        backref='owned_amenities', 
-        lazy='subquery'
-    )
-    
-    # One-to-Many: Direct relationship to a single place (legacy, rarely used)
-    # foreign_keys specifies which FK to use (since we have multiple relationships with Place)
-    # backref creates 'direct_amenities' attribute on Place model
-    place = db.relationship(
-        'Place', 
-        foreign_keys=[place_id], 
-        backref='direct_amenities', 
-        lazy='subquery'
-    )
-
     # Many-to-Many: Amenities can be associated with multiple places
     # secondary='place_amenity' specifies the association table
     # back_populates='amenities' links to the 'amenities' attribute in Place model
-    # This is the PRIMARY way amenities are linked to places
+    # This is how owners select amenities for their places
     places = db.relationship(
         'Place', 
         secondary='place_amenity',      # Association table name
@@ -106,29 +68,23 @@ class Amenity(BaseModel):
         lazy='subquery'                 # Eager load for performance
     )
 
-    def __init__(self, name=None, place_id=None, owner_id=None, **kwargs):
+    def __init__(self, name=None, **kwargs):
         """
         Initialize a new Amenity instance.
         
         Args:
-            name (str, optional): Name of the amenity (e.g., "WiFi")
-            place_id (str, optional): UUID of the associated place (legacy)
-            owner_id (str, optional): UUID of the user creating the amenity
+            name (str, optional): Unique name of the amenity (e.g., "WiFi")
             **kwargs: Additional arguments passed to BaseModel (id, created_at, etc.)
             
         Raises:
-            ValueError: If name validation fails (empty, too long, etc.)
+            ValueError: If name validation fails (empty, too long, duplicate, etc.)
         """
         # Call parent constructor to initialize id, created_at, updated_at
         super().__init__(**kwargs)
         
-        # Set amenity-specific attributes if provided
+        # Set amenity name if provided
         if name:
             self.name = name  # Will trigger validate_name()
-        if place_id:
-            self.place_id = place_id
-        if owner_id:
-            self.owner_id = owner_id
 
     @validates('name')
     def validate_name(self, key, value):
@@ -143,6 +99,7 @@ class Amenity(BaseModel):
         - Must be a string type
         - Must contain at least one non-whitespace character
         - Must be 255 characters or less
+        - Must be unique (enforced by database constraint)
         
         Args:
             key (str): The attribute name being validated ('name')
@@ -177,20 +134,16 @@ class Amenity(BaseModel):
         Convert the Amenity instance to a dictionary for JSON serialization.
         
         This method is used by Flask-RESTX to serialize amenity objects
-        for API responses. It excludes sensitive/internal fields.
+        for API responses.
         
         The dictionary includes:
         - id: Unique identifier (UUID)
         - name: Amenity name
         - created_at: ISO 8601 timestamp
         - updated_at: ISO 8601 timestamp
-        - place_id: Associated place UUID (if set)
-        - owner_id: Creator's UUID (if set)
         
         Excluded fields:
-        - owner: Full User object (to prevent circular references)
-        - place: Full Place object (to prevent circular references)
-        - places: List of Place objects (to prevent circular references)
+        - places: List of Place objects (to prevent circular references and huge responses)
         
         Args:
             **kwargs: Additional arguments passed to BaseModel.to_dict()
@@ -205,21 +158,16 @@ class Amenity(BaseModel):
                 'id': 'abc-123-def-456',
                 'name': 'WiFi',
                 'created_at': '2023-11-09T10:30:00',
-                'updated_at': '2023-11-09T10:30:00',
-                'place_id': None,
-                'owner_id': None
+                'updated_at': '2023-11-09T10:30:00'
             }
         """
         # Call parent to_dict() to get base fields (id, created_at, updated_at)
         data = super().to_dict(**kwargs)
         
-        # Relationships are NOT included in to_dict() to avoid:
+        # The 'places' relationship is NOT included to avoid:
         # 1. Circular references (Place -> Amenity -> Place -> ...)
         # 2. Performance issues (loading entire object graphs)
-        # 3. Exposing unnecessary data in API responses
-        #
-        # If you need relationship data, access it directly:
-        # amenity.owner.to_dict() or amenity.places[0].to_dict()
+        # 3. Huge responses (an amenity might be linked to thousands of places)
         
         return data
 
