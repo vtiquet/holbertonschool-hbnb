@@ -9,7 +9,9 @@
 </head>
 <body>
     <header>
-        <img src="images/logo.png" alt="HBnB Logo" class="logo">
+        <a href="index.html" class="logo-link">
+            <img src="images/logo.png" alt="HBnB Logo" class="logo">
+        </a>
         <nav>
             <a href="index.html">Home</a>
             <a href="login.html" class="login-button" id="login-link">Login</a>
@@ -19,14 +21,8 @@
     <main class="container">
         <section class="filter-section">
             <h2>Filter Places</h2>
-            <label for="price-filter">Max Price Per Night ($):</label>
-            <select id="price-filter">
-                <option value="all">All</option>
-                <option value="10">Up to $10</option>
-                <option value="50">Up to $50</option>
-                <option value="100">Up to $100</option>
-                <option value="500">Up to $500</option>
-            </select>
+            <label for="price-filter">Max Price: $<span id="current-max-price">500</span></label>
+            <input type="range" id="price-filter" min="0" max="500" value="500" step="10">
         </section>
         
         <hr>
