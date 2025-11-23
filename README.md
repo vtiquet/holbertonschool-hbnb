@@ -1,4 +1,4 @@
-\<div align="center"\>\<img src="[https://github.com/ksyv/holbertonschool-web\_front\_end/blob/main/baniere\_holberton.png](https://github.com/ksyv/holbertonschool-web_front_end/blob/main/baniere_holberton.png)"\>\</div\>
+<div align="center"><img src="https://github.com/ksyv/holbertonschool-web_front_end/blob/main/baniere_holberton.png"></div>
 
 # HBnB - Project: Your Home Away From Home 🏡✨
 
