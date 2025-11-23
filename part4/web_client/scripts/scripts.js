@@ -5,7 +5,7 @@ let allPlaces = [];
 // Simple cache to store fetched user details and avoid redundant API calls
 let userCache = {}; 
 
-// --- HELPER FUNCTIONS (Omitted for space) ---
+// --- HELPER FUNCTIONS (RETAINED) ---
 
 function getCookie(name) {
     const value = `; ${document.cookie}`;
@@ -78,6 +78,7 @@ function setupPasswordToggle() {
 
 /**
  * Fetches user details by ID, utilizing a cache.
+ * NOTE: This is primarily used for Reviewers now, as Host details are expected to be embedded.
  * @param {string} userId - The ID of the user to fetch.
  * @returns {Promise<object|null>} The user object or null on failure.
  */
@@ -99,7 +100,7 @@ async function fetchUser(userId) {
     return null;
 }
 
-// --- TASK 1: LOGIN (login.html) (Omitted for space) ---
+// --- TASK 1: LOGIN (login.html) (RETAINED) ---
 
 function setupLoginForm() {
     const loginForm = document.getElementById('login-form');
@@ -140,9 +141,8 @@ function setupLoginForm() {
                     const data = await response.json();
                     document.cookie = `token=${data.access_token}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax;`; 
                     
-                    // NEW/FIX: Check for a 'next' URL parameter and use it for redirection
                     const urlParams = new URLSearchParams(window.location.search);
-                    const nextUrl = urlParams.get('next') || 'index.html'; // Default to index.html
+                    const nextUrl = urlParams.get('next') || 'index.html'; 
                     
                     if (notification) {
                         notification.style.display = 'block';
@@ -170,7 +170,7 @@ function setupLoginForm() {
     }
 }
 
-// --- TASK 2: INDEX (index.html) (Omitted for space) ---
+// --- TASK 2: INDEX (index.html) (RETAINED) ---
 
 function checkIndexAuthentication() {
     const token = getToken();
@@ -189,7 +189,6 @@ function checkIndexAuthentication() {
             document.cookie = 'token=; path=/; max-age=0; Secure; SameSite=Lax';
             customAlert('You have been logged out.');
             
-            // FIX: Redirect back to the current page (e.g., place.html)
             window.location.href = window.location.href; 
         });
         nav.appendChild(logoutLink);
@@ -203,7 +202,6 @@ function checkIndexAuthentication() {
         nav.appendChild(loginLinkElement);
     }
     
-    // Only load places on index page to avoid errors on place.html/login.html
     const path = window.location.pathname;
     if (path.includes('index.html') || path.endsWith('/web_client/') || path.endsWith('/part4/')) {
         loadPlaces();
@@ -318,27 +316,29 @@ async function loadPlaces() {
 /**
  * Renders the main place information and amenities onto the #place-details section.
  * @param {object} place - The place object fetched from the API.
- * @param {object|null} user - The host user object fetched from the API (optional).
- * @param {Array<object>} amenities - List of amenity objects linked to the place. (NEW)
+ * @param {object|null} owner - The embedded host user object (place.owner). (UPDATED)
+ * @param {Array<object>} amenities - List of embedded amenity objects (place.amenities). (UPDATED)
  */
-function renderPlaceDetails(place, user, amenities = []) {
+function renderPlaceDetails(place, owner, amenities = []) {
     const container = document.getElementById('place-details'); 
     if (!container) return;
 
+    // FIX: Host Name Logic - assumes owner is embedded in the place object (as per partner's code)
     let hostName;
-    if (user && user.first_name && user.last_name) {
-        hostName = `${user.first_name} ${user.last_name}`;
+    if (owner && owner.first_name && owner.last_name) {
+        hostName = `${owner.first_name} ${owner.last_name}`;
     } else if (place.host_id) {
-        hostName = `User ID: ${place.host_id}`;
+        // Fallback to displaying host_id if name is missing but ID is present (from main place object)
+        hostName = `User ID: ${place.host_id} (Host name missing)`;
     } else {
-        hostName = 'N/A';
+        hostName = 'N/A (Check API/DB linkage for host)';
     }
 
     const placeName = place.title || 'Details Not Found';
     const priceDisplay = (place.price != null && place.price !== '') ? place.price : 'N/A'; 
     const placeLocation = `GPS: ${place.latitude?.toFixed(4) || '?'}°, ${place.longitude?.toFixed(4) || '?'}°`;
     
-    // NEW: Build the dynamic amenities list HTML
+    // FIX: Build the dynamic amenities list HTML from the embedded amenities array
     let amenitiesHtml = '';
     if (amenities.length > 0) {
         amenities.forEach(amenity => {
@@ -346,7 +346,7 @@ function renderPlaceDetails(place, user, amenities = []) {
             amenitiesHtml += `<li><i class="fas fa-check-circle"></i> ${amenity.name}</li>`;
         });
     } else {
-        amenitiesHtml = '<li>No amenities listed for this place.</li>';
+        amenitiesHtml = '<li>No amenities listed for this place (Check API response structure).</li>';
     }
     
     container.innerHTML = `
@@ -400,9 +400,16 @@ function renderReviews(reviews, placeId) {
             reviewItem.className = 'review-item';
             
             const hasUserName = review.userName && review.userName !== 'null null' && review.userName.trim() !== '';
-            const userNameDisplay = hasUserName
-                ? `Reviewed by: ${review.userName}` 
-                : `User ID: ${review.user_id}`; // Fallback to ID
+            
+            // FIX: Robust check for user ID to prevent "User ID: undefined" string
+            let userNameDisplay;
+            if (hasUserName) {
+                 userNameDisplay = `Reviewed by: ${review.userName}`;
+            } else if (review.user_id) { 
+                 userNameDisplay = `Reviewed by: User ID: ${review.user_id}`;
+            } else { 
+                 userNameDisplay = `Reviewed by: Anonymous User (ID missing)`;
+            }
 
             reviewItem.innerHTML = `
                 <div class="review-header">
@@ -450,21 +457,22 @@ async function setupPlaceDetails() {
     container.innerHTML = 'Loading place details...';
     
     try {
-        // 1. Fetch Place Details
+        // 1. Fetch Place Details (EAGER LOADING EXPECTED: place.owner, place.amenities, place.reviews)
         const placeResponse = await fetch(`${API_BASE_URL}/places/${placeId}`);
         if (!placeResponse.ok) {
             throw new Error('Place not found or API error.');
         }
         const place = await placeResponse.json();
 
-        // 2. Fetch Host Details 
-        const hostUser = await fetchUser(place.host_id);
+        // Use embedded amenities and owner/host details
+        const placeAmenities = place.amenities || [];
+        const owner = place.owner || null;
         
-        // 3. Fetch Reviews
-        const reviewsResponse = await fetch(`${API_BASE_URL}/places/${placeId}/reviews`);
-        const reviews = reviewsResponse.ok ? await reviewsResponse.json() : [];
+        // Use embedded reviews
+        const reviews = place.reviews || [];
 
-        // 4. Resolve User Names for all Reviews concurrently
+        // 2. Resolve User Names for all Reviews concurrently
+        // NOTE: This is still required as the reviewer's name is NOT embedded in the review object.
         const reviewUserPromises = reviews.map(review => fetchUser(review.user_id));
         const reviewUsers = await Promise.all(reviewUserPromises);
         
@@ -481,12 +489,8 @@ async function setupPlaceDetails() {
             };
         });
         
-        // 5. NEW: Fetch Amenities for the Place
-        const amenitiesResponse = await fetch(`${API_BASE_URL}/places/${placeId}/amenities`);
-        const placeAmenities = amenitiesResponse.ok ? await amenitiesResponse.json() : [];
-
-        // 6. Render Details - passing amenities now
-        renderPlaceDetails(place, hostUser, placeAmenities); 
+        // 3. Render Details
+        renderPlaceDetails(place, owner, placeAmenities); 
         renderReviews(enhancedReviews, placeId); 
 
     } catch (error) {
@@ -496,7 +500,7 @@ async function setupPlaceDetails() {
 }
 
 
-// --- TASK 4: ADD REVIEW FORM (add_review.html) (Omitted for space) ---
+// --- TASK 4: ADD REVIEW FORM (add_review.html) (RETAINED) ---
 
 function setupReviewForm() {
     const token = getToken();
@@ -555,7 +559,6 @@ async function submitReview(token, placeId, reviewText, rating) {
             document.getElementById('review-form').reset(); 
             if (feedbackMessage) feedbackMessage.textContent = 'Success! Review submitted.';
             setTimeout(() => {
-                // After successful review, redirect back to the place details page
                 window.location.href = `place.html?id=${placeId}`;
             }, 1500);
         } else {
@@ -571,7 +574,7 @@ async function submitReview(token, placeId, reviewText, rating) {
     }
 }
 
-// --- MAIN INITIALIZATION (Unchanged) ---
+// --- MAIN INITIALIZATION (RETAINED) ---
 
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
