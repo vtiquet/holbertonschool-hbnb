@@ -191,14 +191,23 @@ footer {
     box-sizing: border-box;
 }
 
-.form button[type="submit"] {
-    background-color: #4CAF50;
+.form button[type="submit"],
+.details-button {
+    background-color: #008080; /* Primary Teal Color */
     color: white;
     padding: 10px 15px;
     border: none;
     border-radius: 5px;
     cursor: pointer;
     margin-top: 15px;
+    font-size: 1em;
+    width: 100%;
+    transition: background-color 0.3s;
+}
+
+.form button[type="submit"]:hover,
+.details-button:hover {
+    background-color: #006666; /* Darker Teal for hover effect */
 }
 
 /* Place Details Specifics */
