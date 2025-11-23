@@ -129,8 +129,19 @@ function setupLoginForm() {
     const loginForm = document.getElementById('login-form');
     const errorMessage = document.getElementById('error-message'); 
     
+    // Get the notification elements once, for easy access
+    const notification = document.getElementById('successNotification');
+    const closeBtn = document.querySelector('#successNotification .close-btn');
+
     // 🎯 FIX: Initialize the password toggle 🎯
     setupPasswordToggle(); 
+
+    // Optional: Add event listener for the close button
+    if (closeBtn && notification) {
+        closeBtn.onclick = function() {
+            notification.style.display = 'none';
+        }
+    }
 
     if (loginForm) {
         loginForm.addEventListener('submit', async (event) => {
@@ -141,6 +152,7 @@ function setupLoginForm() {
             const password = document.getElementById('password').value;
 
             if (errorMessage) errorMessage.textContent = ''; // Clear previous errors
+            if (notification) notification.style.display = 'none'; // Hide notification if visible
 
             if (!email || !password) {
                 if (errorMessage) errorMessage.textContent = 'Please enter both email and password.';
@@ -163,11 +175,26 @@ function setupLoginForm() {
                     const data = await response.json();
                     
                     // 🎯 FIX: Ensure SameSite=Lax for modern browsers and security.
-                    // This is VITAL for cookies set from a different port/domain.
                     document.cookie = `token=${data.access_token}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax;`; 
                     
-                    // Redirect to the main page
-                    window.location.href = 'index.html';
+                    // 🔔 START: Notification Logic 🔔
+                    if (notification) {
+                        // 1. Show the success notification
+                        notification.style.display = 'block';
+
+                        // 2. Delay the redirection using setTimeout
+                        setTimeout(() => {
+                            // Hide notification just before redirecting
+                            notification.style.display = 'none'; 
+                            
+                            // 3. Redirect to the main page
+                            window.location.href = 'index.html';
+                        }, 2000); // Wait 2000 milliseconds (2 seconds)
+                    } else {
+                         // Fallback: If no notification element, redirect immediately
+                         window.location.href = 'index.html';
+                    }
+                    // 🔔 END: Notification Logic 🔔
 
                 } else {
                     // Failure: Parse JSON error message if possible

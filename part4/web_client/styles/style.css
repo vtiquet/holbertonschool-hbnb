@@ -8,6 +8,11 @@ body {
     padding: 0;
     background-color: #f4f4f4;
     color: #333;
+    
+    /* 🎯 FIX: Sticky Footer Setup 🎯 */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
 .container {
@@ -18,6 +23,9 @@ body {
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+
+    /* 🎯 FIX: Flex for Sticky Footer - takes up the middle space 🎯 */
+    flex: 1; 
 }
 
 header {
@@ -27,6 +35,8 @@ header {
     padding: 10px 5%;
     background-color: #008080; /* Teal/Turquoise color palette choice */
     color: white;
+    /* Ensure header does not shrink */
+    flex-shrink: 0;
 }
 
 .logo {
@@ -51,7 +61,8 @@ nav a:hover {
 }
 
 .login-form-section {
-    max-width: 400px; 
+    max-width: 600px; 
+    /* Margin will be overridden below for centering, but kept here as fallback */
     margin: 40px auto; 
     padding: 20px;
     border: 1px solid #ccc;
@@ -65,12 +76,40 @@ nav a:hover {
     width: 100%; /* Take up the full width of the constrained section */
 }
 
+
+/* 🎯 FIX: Remove the .container (white window) on login.html 🎯 */
+/* * We use the :has() pseudo-class to target a .container only when it 
+ * contains the .login-form-section (which is unique to the login page).
+ */
+.container:has(.login-form-section) {
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+    margin: 0 auto; 
+
+    /* Center the login form section vertically and horizontally in the remaining space */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container:has(.login-form-section) .login-form-section {
+    /* Remove original margin so flexbox can center it */
+    margin: auto;
+    /* Add padding/margin inside the form section for breathing room if needed */
+    padding: 40px 20px; 
+}
+
+
 footer {
     text-align: center;
     padding: 10px;
-    margin-top: 20px;
+    /* 🎯 FIX: Remove margin-top so footer sticks directly to the bottom 🎯 */
+    margin-top: 0; 
     background-color: #333;
     color: white;
+    /* Ensures footer maintains its height and is pushed to the bottom */
+    flex-shrink: 0; 
 }
 
 /* --- FIXED PARAMETERS (MANDATORY) --- */
@@ -107,11 +146,12 @@ footer {
     width: 100%;
 }
 
-/* FIX: Apply consistent input styling inside the password container */
+/* 🎯 FIX: Eye Icon Vertical Centering 🎯 */
+/* We override the global input margin ONLY for the input inside .password-container */
 .password-container input {
     width: 100%;
     padding: 10px;
-    margin-top: 5px;
+    margin-top: 0; /* <-- FIX: Removed the 5px margin that caused the offset */
     border: 1px solid #ccc;
     border-radius: 5px;
     box-sizing: border-box;
@@ -122,10 +162,10 @@ footer {
     position: absolute;
     top: 50%;
     right: 10px;
-    transform: translateY(-50%);
+    transform: translateY(-50%); /* Keeps the icon perfectly centered vertically */
     cursor: pointer;
     color: #888;
-    z-index: 10; /* Ensure the icon is always above the input field */
+    z-index: 10; 
 }
 
 #togglePassword:hover {
@@ -139,16 +179,16 @@ footer {
     font-weight: bold;
 }
 
+/* Global Input Styles: Exclude input[type="password"] since it's handled above */
 .form input[type="email"], 
-.form input[type="password"],
 .form input[type="number"],
 .form textarea {
     width: 100%;
     padding: 10px;
-    margin-top: 5px;
+    margin-top: 5px; /* Keeps the 5px margin for other inputs */
     border: 1px solid #ccc;
     border-radius: 5px;
-    box-sizing: border-box; /* Important for padding not to widen the element */
+    box-sizing: border-box;
 }
 
 .form button[type="submit"] {
@@ -174,4 +214,61 @@ footer {
 .review-card p:first-child {
     font-weight: bold;
     color: #555;
+}
+
+/* --- Notification Modal Styles --- */
+
+/* The Modal (now a top-right notification box) */
+.notification-modal {
+    display: none;
+    position: fixed;
+    z-index: 2000; 
+    
+    top: 20px;
+    right: 20px;
+    
+    width: auto; 
+    height: auto; 
+    overflow: visible; 
+    background-color: transparent; 
+}
+
+.notification-content {
+    background-color: #fff;
+    margin: 0;
+    padding: 15px 20px;
+    border: 1px solid #ccc;
+    min-width: 250px;
+    max-width: 400px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    text-align: left;
+    position: relative;
+    
+    border-left: 5px solid #008080;
+    border-top: none; 
+}
+
+/* The Close Button */
+.close-btn {
+    color: #aaa;
+    float: right;
+    font-size: 20px;
+    font-weight: bold;
+    position: static;
+    line-height: 1;
+    margin-left: 10px;
+}
+
+.close-btn:hover,
+.close-btn:focus {
+    color: #333;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.notification-content p {
+    font-size: 1em;
+    color: #333;
+    margin: 0;
 }
