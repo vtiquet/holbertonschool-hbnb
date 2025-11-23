@@ -57,7 +57,7 @@ You should have the main HBnB backend running, typically following these steps:
 
 1.  **Clone the Repo (If necessary):**
     ```bash
-    git clone <your_repo_url>
+    git clone https://github.com/vtiquet/holbertonschool-hbnb.git
     cd part4/hbnb
     ```
 2.  **Install Dependencies:**
