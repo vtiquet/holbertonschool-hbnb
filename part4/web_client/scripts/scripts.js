@@ -123,72 +123,68 @@ function setupPasswordToggle() {
 // --- TASK 1: LOGIN (login.html) ---
 
 /**
- * Initializes the login form and password visibility toggle.
+ * Sets up the event listener for the login form submission.
  */
 function setupLoginForm() {
-    const form = document.getElementById('login-form');
-    if (!form) return;
+    const loginForm = document.getElementById('login-form');
+    // Assuming you have an error-message paragraph in login.html (recommended)
+    const errorMessage = document.getElementById('error-message'); 
 
-    // --- Password Visibility Toggle Feature (User Request) ---
-    const passwordInput = document.getElementById('password');
-    const togglePassword = document.getElementById('togglePassword');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (event) => {
+            event.preventDefault(); // Stop default form submission
 
-    if (togglePassword) {
-        togglePassword.addEventListener('click', function (e) {
-            // Toggle the type attribute between 'password' and 'text'
-            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passwordInput.setAttribute('type', type);
-            
-            // Toggle the eye icon
-            this.classList.toggle('fa-eye-slash');
-            this.classList.toggle('fa-eye');
+            // 1. Get user input
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (errorMessage) errorMessage.textContent = ''; // Clear previous errors
+
+            if (!email || !password) {
+                if (errorMessage) errorMessage.textContent = 'Please enter both email and password.';
+                return;
+            }
+
+            try {
+                // 2. Make AJAX Request to API (Targeting /api/v1/auth/login)
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                // 3. Handle API Response
+                if (response.ok) {
+                    // Success
+                    const data = await response.json();
+                    
+                    // Store the JWT token in a cookie.
+                    // Setting path=/ makes it available across the whole site.
+                    // max-age=86400 is 24 hours (optional, but good for persistence).
+                    document.cookie = `token=${data.access_token}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax`; 
+                    
+                    // Redirect to the main page
+                    window.location.href = 'index.html';
+
+                } else {
+                    // Failure: Parse JSON error message if possible
+                    const errorData = await response.json().catch(() => ({}));
+                    const message = errorData.message || 'Login failed. Check your email and password.';
+                    
+                    // Display error message
+                    if (errorMessage) errorMessage.textContent = `Error: ${message}`;
+                    customAlert(`Login Failed: ${message}`);
+                }
+            } catch (error) {
+                console.error('Network or API connection error:', error);
+                const networkError = 'A network error occurred. Ensure the server is running.';
+                if (errorMessage) errorMessage.textContent = networkError;
+                customAlert(networkError);
+            }
         });
     }
-
-    // --- Login Form Submission ---
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        const errorElement = document.getElementById('error-message');
-        errorElement.textContent = '';
-
-        const loginData = { email, password };
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(loginData),
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                
-                // CRITICAL FIX: Check for the 'token' key
-                if (data.token) {
-                    // Set cookie for 1 hour
-                    document.cookie = `token=${data.token}; path=/; max-age=3600; Secure; SameSite=Lax`;
-                    customAlert('Login successful! Redirecting...');
-                    window.location.href = 'index.html';
-                } else {
-                    // This handles the user's specific error message
-                    customAlert('Login successful, but no token received from the API.');
-                }
-            } else {
-                const errorData = await response.json().catch(() => ({ message: 'Login failed: Unknown error.' }));
-                const message = errorData.message || response.statusText || 'Login failed.';
-                errorElement.textContent = message;
-                customAlert(`Login failed: ${message}`);
-            }
-        } catch (error) {
-            console.error('Login error:', error);
-            errorElement.textContent = 'A network error occurred. Please check the API status.';
-            customAlert('A network error occurred during login.');
-        }
-    });
 }
 
 // --- TASK 2: INDEX (index.html) ---
@@ -235,7 +231,7 @@ function checkIndexAuthentication() {
 
 
 /**
- * Fetches and displays all places.
+ * Fetches and displays the list of places on the index page.
  */
 async function loadPlaces() {
     const placesContainer = document.getElementById('places-list');
@@ -249,30 +245,30 @@ async function loadPlaces() {
         }
         const places = await response.json();
         
-        placesContainer.innerHTML = '';
+        placesContainer.innerHTML = ''; // Clear 'Loading...'
+
         if (places.length === 0) {
-            placesContainer.innerHTML = '<p>No places found in the database.</p>';
+            placesContainer.innerHTML = '<p>No places found.</p>';
             return;
         }
 
         places.forEach(place => {
-            // Revert to direct access. If the API is running and populated correctly, these should work.
-            // If they are still 0 or 'N/A' after this, the problem is in your API's /places endpoint response structure.
-            const price = place.price_by_night;
-            const guests = place.max_guest;
-            const rooms = place.number_rooms;
-            const bathrooms = place.number_bathrooms;
+            // FIX: Ensure you are using the correct API property names
+            const price = place.price_by_night || 'N/A';
+            const guests = place.max_guest || 'N/A';
+            const rooms = place.number_rooms || 'N/A';
+            const bathrooms = place.number_bathrooms || 'N/A';
             
             const placeCard = document.createElement('article');
             placeCard.className = 'place-card';
             placeCard.innerHTML = `
-                <h3>${place.title}</h3>
-                <p><strong>$${price || 'N/A'}</strong> per night</p>
+                <h3>${place.title || 'Untitled Place'}</h3>
+                <p><strong>$${price}</strong> per night</p>
                 <p>${place.description || 'No description provided.'}</p>
                 <div class="place-meta">
-                    <span>Max Guests: ${guests || 'N/A'}</span>
-                    <span>Bedrooms: ${rooms || 'N/A'}</span>
-                    <span>Bathrooms: ${bathrooms || 'N/A'}</span>
+                    <span>Max Guests: ${guests}</span>
+                    <span>Bedrooms: ${rooms}</span>
+                    <span>Bathrooms: ${bathrooms}</span>
                 </div>
                 <a href="place.html?id=${place.id}" class="details-button">View Details</a>
             `;
@@ -281,7 +277,7 @@ async function loadPlaces() {
 
     } catch (error) {
         console.error("Error fetching places:", error);
-        placesContainer.innerHTML = `<p style="color: red;">Failed to load places. API Error: ${error.message}</p>`;
+        placesContainer.innerHTML = '<p style="color: red;">Error loading places. Please check the API status.</p>';
     }
 }
 
@@ -345,24 +341,22 @@ async function setupPlaceDetails() {
 }
 
 /**
- * Renders the main place information onto place.html.
+ * Renders the main place information onto place.html dynamically.
  * @param {object} place - The place object fetched from the API.
- * @param {object} reviews - The array of review objects.
- * @param {object} amenities - The array of amenity objects (optional/if needed).
+ * @param {object} user - The host user object fetched from the API (optional).
  */
 function renderPlaceDetails(place, user) {
     const container = document.getElementById('place-details-container');
     if (!container) return;
 
-    // FIX: Use actual place data, not hardcoded text.
-    // NOTE: This assumes your API /users/{id} endpoint returns a user object.
-    const hostName = user ? `${user.first_name} ${user.last_name}` : `User ID ${place.host_id}`;
+    // Use actual fetched data
+    const hostName = user ? `${user.first_name} ${user.last_name}` : `User ID: ${place.host_id}`;
     
-    // NOTE: Amenities are not fetched in this simplified script. You would need to fetch them
-    // via /places/{id}/amenities and render them here.
+    // NOTE: Amenities are displayed as placeholders here.
+    // Dynamic loading of amenities and reviews should be done by separate functions if your API supports it.
     
     container.innerHTML = `
-        <h2>${place.title}</h2>
+        <h2>${place.title || 'Details Not Found'}</h2>
         <div class="place-info">
             <p><strong>Host:</strong> ${hostName}</p>
             <p><strong>Price:</strong> $${place.price_by_night || 'N/A'} / night</p>
@@ -381,9 +375,75 @@ function renderPlaceDetails(place, user) {
                 <li>Wi-Fi</li>
                 <li>Kitchen</li>
                 <li>Free parking</li>
-                </ul>
+            </ul>
+        </section>
+        
+        <section class="reviews-section">
+            <h3>Reviews</h3>
+            <div id="reviews-list">
+                </div>
+            <a id="add-review-link" href="login.html">Login to add a review</a>
         </section>
     `;
+}
+
+/**
+ * Loads and displays detailed information for a specific place by fetching API data.
+ */
+async function setupPlaceDetails() {
+    const placeId = getPlaceIdFromURL();
+    const container = document.getElementById('place-details-container');
+    if (!placeId || !container) {
+        if(container) container.innerHTML = '<h2>Error: Place ID not found in URL.</h2>';
+        return;
+    }
+
+    await checkIndexAuthentication(); // Update nav bar (Logout/Login)
+    container.innerHTML = 'Loading place details...';
+
+    try {
+        // 1. Fetch Place Details
+        const placeResponse = await fetch(`${API_BASE_URL}/places/${placeId}`);
+        if (!placeResponse.ok) {
+            throw new Error('Place not found or API error.');
+        }
+        const place = await placeResponse.json();
+
+        // 2. Fetch Host Details
+        let hostUser = null;
+        if (place.host_id) {
+            try {
+                const hostResponse = await fetch(`${API_BASE_URL}/users/${place.host_id}`);
+                if (hostResponse.ok) {
+                    hostUser = await hostResponse.json();
+                }
+            } catch(e) {
+                console.warn("Could not fetch host details.");
+            }
+        }
+        
+        // 3. Fetch Reviews (Assuming you have a function called renderReviews)
+        const reviewsResponse = await fetch(`${API_BASE_URL}/places/${placeId}/reviews`);
+        const reviews = reviewsResponse.ok ? await reviewsResponse.json() : [];
+
+        // 4. Render Details
+        renderPlaceDetails(place, hostUser);
+        // Assuming renderReviews is another function you've implemented
+        // renderReviews(reviews); 
+
+        // 5. Update 'Add Review' link (assuming there is one in your HTML)
+        const addReviewLink = document.getElementById('add-review-link');
+        if (addReviewLink) {
+            if (getToken()) {
+                addReviewLink.href = `add_review.html?place_id=${placeId}`;
+                addReviewLink.textContent = 'Add a Review';
+            }
+        }
+
+    } catch (error) {
+        console.error("Error fetching place details:", error);
+        container.innerHTML = `<h2>Error loading place details.</h2><p>${error.message}</p>`;
+    }
 }
 
 
