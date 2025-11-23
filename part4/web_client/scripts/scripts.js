@@ -127,64 +127,50 @@ function setupPasswordToggle() {
  */
 function setupLoginForm() {
     const loginForm = document.getElementById('login-form');
-    // Assuming you have an error-message paragraph in login.html (recommended)
-    const errorMessage = document.getElementById('error-message'); 
+    if (!loginForm) return;
 
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (event) => {
-            event.preventDefault(); // Stop default form submission
+    // Initialize the password toggle function
+    setupPasswordToggle(); 
 
-            // 1. Get user input
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
+    loginForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const errorMessage = document.getElementById('error-message');
+        
+        if (errorMessage) errorMessage.textContent = ''; // Clear previous errors
 
-            if (errorMessage) errorMessage.textContent = ''; // Clear previous errors
+        try {
+            // Correctly targeting /api/v1/auth/login
+            const LOGIN_ENDPOINT = `${API_BASE_URL}/auth/login`; 
 
-            if (!email || !password) {
-                if (errorMessage) errorMessage.textContent = 'Please enter both email and password.';
-                return;
+            const response = await fetch(LOGIN_ENDPOINT, { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email, password })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                // Store the JWT token in a cookie. path=/ ensures it's available across the entire site.
+                document.cookie = `token=${data.access_token}; path=/; max-age=3600; Secure; SameSite=Lax`; 
+                window.location.href = 'index.html'; // Redirect on success
+            } else {
+                // Handle non-200 responses (e.g., 401 Unauthorized)
+                const errorData = await response.json().catch(() => ({ message: 'Login failed: Unknown error.' }));
+                const message = errorData.message || response.statusText || 'Invalid email or password.';
+                if (errorMessage) errorMessage.textContent = message;
+                customAlert('Login failed: ' + message); // Display error
             }
-
-            try {
-                // 2. Make AJAX Request to API (Targeting /api/v1/auth/login)
-                const response = await fetch(`${API_BASE_URL}/auth/login`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ email, password })
-                });
-
-                // 3. Handle API Response
-                if (response.ok) {
-                    // Success
-                    const data = await response.json();
-                    
-                    // Store the JWT token in a cookie.
-                    // Setting path=/ makes it available across the whole site.
-                    // max-age=86400 is 24 hours (optional, but good for persistence).
-                    document.cookie = `token=${data.access_token}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax`; 
-                    
-                    // Redirect to the main page
-                    window.location.href = 'index.html';
-
-                } else {
-                    // Failure: Parse JSON error message if possible
-                    const errorData = await response.json().catch(() => ({}));
-                    const message = errorData.message || 'Login failed. Check your email and password.';
-                    
-                    // Display error message
-                    if (errorMessage) errorMessage.textContent = `Error: ${message}`;
-                    customAlert(`Login Failed: ${message}`);
-                }
-            } catch (error) {
-                console.error('Network or API connection error:', error);
-                const networkError = 'A network error occurred. Ensure the server is running.';
-                if (errorMessage) errorMessage.textContent = networkError;
-                customAlert(networkError);
-            }
-        });
-    }
+        } catch (error) {
+            console.error('Login error:', error);
+            if (errorMessage) errorMessage.textContent = 'A network error occurred. Check console for details.';
+            customAlert('A network error occurred. (CORS issue is common here)');
+        }
+    });
 }
 
 // --- TASK 2: INDEX (index.html) ---
