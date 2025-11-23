@@ -342,3 +342,119 @@ footer {
 .filter-container label {
     white-space: nowrap;
 }
+
+/* --- PLACE DETAILS PAGE STYLES (place.html) --- */
+
+/* Main container styling for the details box, similar to place cards */
+main #place-details article.place-article {
+    width: 80%; /* Adjust as needed */
+    margin: 30px auto;
+    padding: 30px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    background-color: #f7f7f7;
+}
+
+/* Title styling */
+main #place-details article.place-article h2 {
+    color: #008080;
+    font-size: 28px;
+    border-bottom: 2px solid #008080;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+/* Header section for price and location */
+.place-info-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding: 10px 0;
+    border-bottom: 1px dashed #ccc;
+    font-size: 1.1em;
+}
+
+.place-price {
+    font-weight: bold;
+    color: #FF5A5F; /* Red color for price */
+}
+
+/* Generic section styling */
+.place-detail-section {
+    margin-bottom: 25px;
+    padding: 15px;
+    border: 1px solid #eee;
+    background-color: white;
+    border-radius: 5px;
+}
+
+.place-detail-section h4 {
+    color: #333;
+    font-size: 1.2em;
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+/* Amenities List */
+.amenities-list {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.amenities-list li {
+    font-size: 1em;
+    color: #555;
+}
+
+.amenities-list li i {
+    margin-right: 8px;
+    color: #008080; /* Teal icon color */
+}
+
+
+/* --- REVIEWS STYLING --- */
+
+#reviews {
+    width: 80%;
+    margin: 30px auto;
+    padding: 30px;
+}
+
+#reviews h3 {
+    color: #333;
+    font-size: 24px;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.review-item {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.review-rating {
+    font-weight: bold;
+    color: #008080;
+}
+
+.review-text {
+    line-height: 1.6;
+    color: #333;
+}

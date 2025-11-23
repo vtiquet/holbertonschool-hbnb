@@ -3,7 +3,7 @@ const API_BASE_URL = 'http://127.0.0.1:5000/api/v1';
 // Global storage for all fetched places to enable client-side filtering
 let allPlaces = []; 
 
-// --- HELPER FUNCTIONS (Unchanged/Slightly simplified) ---
+// --- Helper Functions (Omitted for space) ---
 
 function getCookie(name) {
     const value = `; ${document.cookie}`;
@@ -22,7 +22,7 @@ function getToken() {
 }
 
 function customAlert(message) {
-    // Custom alert implementation remains here
+    // Custom alert implementation (omitted for space, assume it works)
     const alertBox = document.createElement('div');
     alertBox.style.cssText = `
         position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -75,8 +75,7 @@ function setupPasswordToggle() {
     }
 }
 
-
-// --- TASK 1: LOGIN (login.html) ---
+// --- TASK 1: LOGIN (login.html) (Omitted for space) ---
 
 function setupLoginForm() {
     const loginForm = document.getElementById('login-form');
@@ -122,7 +121,7 @@ function setupLoginForm() {
                         setTimeout(() => {
                             notification.style.display = 'none'; 
                             window.location.href = 'index.html';
-                        }, 2000);
+                        }, 400);
                     } else {
                            window.location.href = 'index.html';
                     }
@@ -143,7 +142,7 @@ function setupLoginForm() {
     }
 }
 
-// --- TASK 2: INDEX (index.html) ---
+// --- TASK 2: INDEX (index.html) (Omitted for space) ---
 
 function checkIndexAuthentication() {
     const token = getToken();
@@ -177,15 +176,11 @@ function checkIndexAuthentication() {
     loadPlaces();
 }
 
-/**
- * Renders the filtered list of places to the DOM.
- * @param {Array} places - The list of place objects to render.
- */
 function renderPlaces(places) {
     const placesContainer = document.getElementById('places-list');
     if (!placesContainer) return;
     
-    placesContainer.innerHTML = ''; // Clear existing content
+    placesContainer.innerHTML = ''; 
 
     if (places.length === 0) {
         placesContainer.innerHTML = '<p>No places found matching your criteria.</p>';
@@ -196,9 +191,7 @@ function renderPlaces(places) {
         const placeCard = document.createElement('article');
         placeCard.className = 'place-card';
         
-        // Use 'title' and 'price' properties
         const placeName = place.title || 'Unnamed Place';
-        // Use explicit check for null/undefined to allow 0 price display, using 'price' property
         const priceDisplay = (place.price != null && place.price !== '') ? place.price : 'N/A'; 
         const placeLocation = `GPS: ${place.latitude?.toFixed(4) || '?'}°, ${place.longitude?.toFixed(4) || '?'}°`;
 
@@ -227,36 +220,25 @@ function renderPlaces(places) {
     });
 }
 
-/**
- * Filters the places by price and triggers re-rendering.
- * @param {Array} places - The complete list of place objects.
- * @param {number} maxPrice - The maximum price allowed.
- */
 function filterAndRenderPlaces(places, maxPrice) {
     if (maxPrice == null || isNaN(maxPrice)) {
-        // If maxPrice is invalid/null, show all places.
         renderPlaces(places);
         return;
     }
     
     const filteredPlaces = places.filter(place => {
         const price = parseFloat(place.price);
-        // Only include places where the price is a valid number AND is less than or equal to maxPrice
         return !isNaN(price) && price <= maxPrice;
     });
 
     renderPlaces(filteredPlaces);
 }
 
-/**
- * Sets up the event listener for the price filter range input.
- */
 function setupPriceFilter() {
     const priceFilter = document.getElementById('price-filter');
     const priceDisplay = document.getElementById('current-max-price');
 
     if (priceFilter) {
-        // 1. Set up the input event listener for real-time filtering
         priceFilter.addEventListener('input', function() {
             const maxPrice = parseInt(this.value, 10);
             if (priceDisplay) priceDisplay.textContent = maxPrice;
@@ -264,24 +246,17 @@ function setupPriceFilter() {
             filterAndRenderPlaces(allPlaces, maxPrice);
         });
         
-        // 2. Initial filter setup
         const initialMaxPrice = parseInt(priceFilter.value, 10);
         if (priceDisplay) priceDisplay.textContent = initialMaxPrice;
         
-        // Initial render is now handled after data fetch in loadPlaces
-        // but this ensures consistency if the default value is changed
         filterAndRenderPlaces(allPlaces, initialMaxPrice);
 
     } else {
-        // Fallback: If no filter is present in the DOM, render all places immediately
         renderPlaces(allPlaces);
     }
 }
 
 
-/**
- * Fetches and stores the list of places, then sets up filtering.
- */
 async function loadPlaces() {
     const placesContainer = document.getElementById('places-list');
     if (!placesContainer) return;
@@ -293,10 +268,8 @@ async function loadPlaces() {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        // 1. Store all fetched places globally
         allPlaces = await response.json();
         
-        // 2. Setup the price filter and trigger initial render
         setupPriceFilter();
 
     } catch (error) {
@@ -308,47 +281,91 @@ async function loadPlaces() {
 
 // --- TASK 3: PLACE DETAILS (place.html) ---
 
+/**
+ * Renders the main place information and amenities onto the #place-details section.
+ * @param {object} place - The place object fetched from the API.
+ * @param {object} user - The host user object fetched from the API (optional).
+ */
 function renderPlaceDetails(place, user) {
-    const container = document.getElementById('place-details-container');
+    const container = document.getElementById('place-details'); 
     if (!container) return;
 
     const hostName = user ? `${user.first_name} ${user.last_name}` : `User ID: ${place.host_id}`;
-    
-    // Using 'title' and 'price' properties
     const placeName = place.title || 'Details Not Found';
     const priceDisplay = (place.price != null && place.price !== '') ? place.price : 'N/A'; 
     const placeLocation = `GPS: ${place.latitude?.toFixed(4) || '?'}°, ${place.longitude?.toFixed(4) || '?'}°`;
     
     container.innerHTML = `
-        <h2>${placeName}</h2>
-        <div class="place-info">
-            <p><strong>Host:</strong> ${hostName}</p>
-            <p><strong>Price:</strong> $${priceDisplay} / night</p>
-            <p><strong>Location:</strong> ${placeLocation}</p>
-            <p><strong>Description:</strong> ${place.description || 'No description provided.'}</p>
-        </div>
-        
-        <section class="amenities-section">
-            <h3>Amenities</h3>
-            <ul id="amenities-list">
-                <li>Wi-Fi</li>
-                <li>Kitchen</li>
-                <li>Free parking</li>
-            </ul>
-        </section>
-        
-        <section class="reviews-section">
-            <h3>Reviews</h3>
-            <div id="reviews-list">
-                </div>
-            <a id="add-review-link" href="login.html">Login to add a review</a>
-        </section>
+        <article class="place-article">
+            <h2>${placeName}</h2>
+
+            <div class="place-info-header">
+                <p><strong>Price:</strong> $<span class="place-price">${priceDisplay}</span> / night</p>
+                <p><strong>Location:</strong> ${placeLocation}</p>
+            </div>
+            
+            <div class="place-detail-section host-info">
+                <h4>Hosted by:</h4>
+                <p>${hostName}</p>
+            </div>
+            
+            <div class="place-detail-section description-info">
+                <h4>Description:</h4>
+                <p>${place.description || 'No description provided.'}</p>
+            </div>
+            
+            <div class="place-detail-section amenities-section">
+                <h4>Amenities</h4>
+                <ul class="amenities-list">
+                    <li><i class="fas fa-wifi"></i> Wi-Fi</li>
+                    <li><i class="fas fa-utensils"></i> Kitchen</li>
+                    <li><i class="fas fa-parking"></i> Free parking</li>
+                    </ul>
+            </div>
+        </article>
     `;
+}
+
+/**
+ * Renders the list of reviews into the #reviews section.
+ */
+function renderReviews(reviews) {
+    const reviewsContainer = document.getElementById('reviews');
+    if (!reviewsContainer) return;
+    
+    reviewsContainer.innerHTML = '<h3>Guest Reviews</h3>'; 
+
+    if (reviews.length === 0) {
+        reviewsContainer.innerHTML += '<p>No reviews yet. Be the first!</p>';
+        return;
+    }
+
+    const reviewsList = document.createElement('div');
+    reviewsList.className = 'reviews-list';
+    
+    reviews.forEach(review => {
+        const reviewItem = document.createElement('article');
+        reviewItem.className = 'review-item';
+        // Note: You would typically fetch the user's name from /users/{user_id}
+        reviewItem.innerHTML = `
+            <div class="review-header">
+                <span class="review-rating">Rating: ${review.rating} / 5</span>
+                <span class="review-user">User ID: ${review.user_id}</span>
+            </div>
+            <p class="review-text">${review.text}</p>
+        `;
+        reviewsList.appendChild(reviewItem);
+    });
+    
+    reviewsContainer.appendChild(reviewsList);
 }
 
 async function setupPlaceDetails() {
     const placeId = getPlaceIdFromURL();
-    const container = document.getElementById('place-details-container');
+    const container = document.getElementById('place-details');
+    const addReviewSection = document.getElementById('add-review');
+    const token = getToken();
+
     if (!placeId || !container) {
         if(container) container.innerHTML = '<h2>Error: Place ID not found in URL.</h2>';
         return;
@@ -356,6 +373,10 @@ async function setupPlaceDetails() {
 
     await checkIndexAuthentication(); 
     container.innerHTML = 'Loading place details...';
+    
+    if (addReviewSection) {
+        addReviewSection.style.display = token ? 'block' : 'none';
+    }
 
     try {
         const placeResponse = await fetch(`${API_BASE_URL}/places/${placeId}`);
@@ -382,14 +403,6 @@ async function setupPlaceDetails() {
         renderPlaceDetails(place, hostUser);
         renderReviews(reviews); 
 
-        const addReviewLink = document.getElementById('add-review-link');
-        if (addReviewLink) {
-            if (getToken()) {
-                addReviewLink.href = `add_review.html?place_id=${placeId}`;
-                addReviewLink.textContent = 'Add a Review';
-            }
-        }
-
     } catch (error) {
         console.error("Error fetching place details:", error);
         container.innerHTML = `<h2>Error loading place details.</h2><p>${error.message}</p>`;
@@ -397,28 +410,7 @@ async function setupPlaceDetails() {
 }
 
 
-function renderReviews(reviews) {
-    const reviewsContainer = document.getElementById('reviews-list');
-    if (!reviewsContainer) return;
-    
-    reviewsContainer.innerHTML = reviews.length === 0 
-        ? '<p>No reviews yet.</p>' 
-        : '';
-
-    reviews.forEach(review => {
-        const reviewCard = document.createElement('article');
-        reviewCard.className = 'review-card';
-        reviewCard.innerHTML = `
-            <h4>Rating: ${review.rating} / 5</h4>
-            <p>User ID: ${review.user_id}</p>
-            <p>${review.text}</p>
-        `;
-        reviewsContainer.appendChild(reviewCard);
-    });
-}
-
-
-// --- TASK 4: ADD REVIEW FORM (add_review.html) ---
+// --- TASK 4: ADD REVIEW FORM (add_review.html) (Omitted for space) ---
 
 function setupReviewForm() {
     const token = getToken();
@@ -492,7 +484,7 @@ async function submitReview(token, placeId, reviewText, rating) {
     }
 }
 
-// --- MAIN INITIALIZATION ---
+// --- MAIN INITIALIZATION (Unchanged) ---
 
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
