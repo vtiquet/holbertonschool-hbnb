@@ -2,8 +2,10 @@ const API_BASE_URL = 'http://127.0.0.1:5000/api/v1';
 
 // Global storage for all fetched places to enable client-side filtering
 let allPlaces = []; 
+// Simple cache to store fetched user details and avoid redundant API calls
+let userCache = {}; 
 
-// --- Helper Functions (Omitted for space) ---
+// --- HELPER FUNCTIONS (Omitted for space) ---
 
 function getCookie(name) {
     const value = `; ${document.cookie}`;
@@ -22,12 +24,11 @@ function getToken() {
 }
 
 function customAlert(message) {
-    // Custom alert implementation (omitted for space, assume it works)
     const alertBox = document.createElement('div');
     alertBox.style.cssText = `
         position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
         padding: 0; background: #fff; border: 2px solid #ccc; border-radius: 10px;
-        box-shadow: 0 8px 16px rgba(0,0,0,0.3); z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 1000;
         width: 300px; overflow: hidden; font-family: Arial, sans-serif;
     `;
     
@@ -75,6 +76,29 @@ function setupPasswordToggle() {
     }
 }
 
+/**
+ * Fetches user details by ID, utilizing a cache.
+ * @param {string} userId - The ID of the user to fetch.
+ * @returns {Promise<object|null>} The user object or null on failure.
+ */
+async function fetchUser(userId) {
+    if (!userId) return null;
+    if (userCache[userId]) return userCache[userId];
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/users/${userId}`);
+        if (response.ok) {
+            const user = await response.json();
+            userCache[userId] = user; // Store in cache
+            return user;
+        }
+    } catch (e) {
+        console.error(`Error fetching user ${userId}:`, e);
+    }
+    userCache[userId] = null; // Cache failure
+    return null;
+}
+
 // --- TASK 1: LOGIN (login.html) (Omitted for space) ---
 
 function setupLoginForm() {
@@ -116,14 +140,18 @@ function setupLoginForm() {
                     const data = await response.json();
                     document.cookie = `token=${data.access_token}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax;`; 
                     
+                    // NEW/FIX: Check for a 'next' URL parameter and use it for redirection
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const nextUrl = urlParams.get('next') || 'index.html'; // Default to index.html
+                    
                     if (notification) {
                         notification.style.display = 'block';
                         setTimeout(() => {
                             notification.style.display = 'none'; 
-                            window.location.href = 'index.html';
-                        }, 400);
+                            window.location.href = nextUrl; 
+                        }, 2000);
                     } else {
-                           window.location.href = 'index.html';
+                           window.location.href = nextUrl;
                     }
 
                 } else {
@@ -160,7 +188,9 @@ function checkIndexAuthentication() {
             e.preventDefault();
             document.cookie = 'token=; path=/; max-age=0; Secure; SameSite=Lax';
             customAlert('You have been logged out.');
-            window.location.href = 'index.html';
+            
+            // FIX: Redirect back to the current page (e.g., place.html)
+            window.location.href = window.location.href; 
         });
         nav.appendChild(logoutLink);
         
@@ -173,7 +203,11 @@ function checkIndexAuthentication() {
         nav.appendChild(loginLinkElement);
     }
     
-    loadPlaces();
+    // Only load places on index page to avoid errors on place.html/login.html
+    const path = window.location.pathname;
+    if (path.includes('index.html') || path.endsWith('/web_client/') || path.endsWith('/part4/')) {
+        loadPlaces();
+    }
 }
 
 function renderPlaces(places) {
@@ -284,16 +318,36 @@ async function loadPlaces() {
 /**
  * Renders the main place information and amenities onto the #place-details section.
  * @param {object} place - The place object fetched from the API.
- * @param {object} user - The host user object fetched from the API (optional).
+ * @param {object|null} user - The host user object fetched from the API (optional).
+ * @param {Array<object>} amenities - List of amenity objects linked to the place. (NEW)
  */
-function renderPlaceDetails(place, user) {
+function renderPlaceDetails(place, user, amenities = []) {
     const container = document.getElementById('place-details'); 
     if (!container) return;
 
-    const hostName = user ? `${user.first_name} ${user.last_name}` : `User ID: ${place.host_id}`;
+    let hostName;
+    if (user && user.first_name && user.last_name) {
+        hostName = `${user.first_name} ${user.last_name}`;
+    } else if (place.host_id) {
+        hostName = `User ID: ${place.host_id}`;
+    } else {
+        hostName = 'N/A';
+    }
+
     const placeName = place.title || 'Details Not Found';
     const priceDisplay = (place.price != null && place.price !== '') ? place.price : 'N/A'; 
     const placeLocation = `GPS: ${place.latitude?.toFixed(4) || '?'}°, ${place.longitude?.toFixed(4) || '?'}°`;
+    
+    // NEW: Build the dynamic amenities list HTML
+    let amenitiesHtml = '';
+    if (amenities.length > 0) {
+        amenities.forEach(amenity => {
+            // Using a generic checkmark icon for now
+            amenitiesHtml += `<li><i class="fas fa-check-circle"></i> ${amenity.name}</li>`;
+        });
+    } else {
+        amenitiesHtml = '<li>No amenities listed for this place.</li>';
+    }
     
     container.innerHTML = `
         <article class="place-article">
@@ -317,54 +371,75 @@ function renderPlaceDetails(place, user) {
             <div class="place-detail-section amenities-section">
                 <h4>Amenities</h4>
                 <ul class="amenities-list">
-                    <li><i class="fas fa-wifi"></i> Wi-Fi</li>
-                    <li><i class="fas fa-utensils"></i> Kitchen</li>
-                    <li><i class="fas fa-parking"></i> Free parking</li>
-                    </ul>
+                    ${amenitiesHtml}
+                </ul>
             </div>
         </article>
     `;
 }
 
 /**
- * Renders the list of reviews into the #reviews section.
+ * Renders the list of reviews into the #reviews section, including dynamic names.
  */
-function renderReviews(reviews) {
+function renderReviews(reviews, placeId) {
     const reviewsContainer = document.getElementById('reviews');
+    const token = getToken();
+
     if (!reviewsContainer) return;
     
     reviewsContainer.innerHTML = '<h3>Guest Reviews</h3>'; 
 
     if (reviews.length === 0) {
         reviewsContainer.innerHTML += '<p>No reviews yet. Be the first!</p>';
-        return;
-    }
+    } else {
+        const reviewsList = document.createElement('div');
+        reviewsList.className = 'reviews-list';
+        
+        reviews.forEach(review => {
+            const reviewItem = document.createElement('article');
+            reviewItem.className = 'review-item';
+            
+            const hasUserName = review.userName && review.userName !== 'null null' && review.userName.trim() !== '';
+            const userNameDisplay = hasUserName
+                ? `Reviewed by: ${review.userName}` 
+                : `User ID: ${review.user_id}`; // Fallback to ID
 
-    const reviewsList = document.createElement('div');
-    reviewsList.className = 'reviews-list';
+            reviewItem.innerHTML = `
+                <div class="review-header">
+                    <span class="review-rating">Rating: ${review.rating} / 5</span>
+                    <span class="review-user">${userNameDisplay}</span>
+                </div>
+                <p class="review-text">${review.text}</p>
+            `;
+            reviewsList.appendChild(reviewItem);
+        });
+        
+        reviewsContainer.appendChild(reviewsList);
+    }
     
-    reviews.forEach(review => {
-        const reviewItem = document.createElement('article');
-        reviewItem.className = 'review-item';
-        // Note: You would typically fetch the user's name from /users/{user_id}
-        reviewItem.innerHTML = `
-            <div class="review-header">
-                <span class="review-rating">Rating: ${review.rating} / 5</span>
-                <span class="review-user">User ID: ${review.user_id}</span>
-            </div>
-            <p class="review-text">${review.text}</p>
-        `;
-        reviewsList.appendChild(reviewItem);
-    });
-    
-    reviewsContainer.appendChild(reviewsList);
+    const ctaContainer = document.createElement('div');
+    ctaContainer.className = 'add-review-cta';
+    ctaContainer.style.textAlign = 'center';
+    ctaContainer.style.marginTop = '20px';
+
+    const buttonStyle = "background-color: #008080; padding: 10px 20px; text-decoration: none; color: white; border-radius: 5px; display: inline-block; transition: background-color 0.3s;";
+
+    if (token) {
+        ctaContainer.innerHTML = `<a href="add_review.html?place_id=${placeId}" class="details-button" style="${buttonStyle}">Add a Review</a>`;
+    } else {
+        const currentPageUrl = encodeURIComponent(window.location.href);
+        ctaContainer.innerHTML = `<a href="login.html?next=${currentPageUrl}" class="details-button" style="${buttonStyle}">Login to Add a Review</a>`;
+    }
+    reviewsContainer.appendChild(ctaContainer);
 }
+
 
 async function setupPlaceDetails() {
     const placeId = getPlaceIdFromURL();
     const container = document.getElementById('place-details');
+    
     const addReviewSection = document.getElementById('add-review');
-    const token = getToken();
+    if(addReviewSection) addReviewSection.style.display = 'none'; 
 
     if (!placeId || !container) {
         if(container) container.innerHTML = '<h2>Error: Place ID not found in URL.</h2>';
@@ -374,34 +449,45 @@ async function setupPlaceDetails() {
     await checkIndexAuthentication(); 
     container.innerHTML = 'Loading place details...';
     
-    if (addReviewSection) {
-        addReviewSection.style.display = token ? 'block' : 'none';
-    }
-
     try {
+        // 1. Fetch Place Details
         const placeResponse = await fetch(`${API_BASE_URL}/places/${placeId}`);
         if (!placeResponse.ok) {
             throw new Error('Place not found or API error.');
         }
         const place = await placeResponse.json();
 
-        let hostUser = null;
-        if (place.host_id) {
-            try {
-                const hostResponse = await fetch(`${API_BASE_URL}/users/${place.host_id}`);
-                if (hostResponse.ok) {
-                    hostUser = await hostResponse.json();
-                }
-            } catch(e) {
-                console.warn("Could not fetch host details.");
-            }
-        }
+        // 2. Fetch Host Details 
+        const hostUser = await fetchUser(place.host_id);
         
+        // 3. Fetch Reviews
         const reviewsResponse = await fetch(`${API_BASE_URL}/places/${placeId}/reviews`);
         const reviews = reviewsResponse.ok ? await reviewsResponse.json() : [];
 
-        renderPlaceDetails(place, hostUser);
-        renderReviews(reviews); 
+        // 4. Resolve User Names for all Reviews concurrently
+        const reviewUserPromises = reviews.map(review => fetchUser(review.user_id));
+        const reviewUsers = await Promise.all(reviewUserPromises);
+        
+        // Map user names back into the review objects
+        const enhancedReviews = reviews.map((review, index) => {
+            const user = reviewUsers[index];
+            let userName = null;
+            if (user && user.first_name && user.last_name) {
+                userName = `${user.first_name} ${user.last_name}`;
+            }
+            return {
+                ...review,
+                userName: userName
+            };
+        });
+        
+        // 5. NEW: Fetch Amenities for the Place
+        const amenitiesResponse = await fetch(`${API_BASE_URL}/places/${placeId}/amenities`);
+        const placeAmenities = amenitiesResponse.ok ? await amenitiesResponse.json() : [];
+
+        // 6. Render Details - passing amenities now
+        renderPlaceDetails(place, hostUser, placeAmenities); 
+        renderReviews(enhancedReviews, placeId); 
 
     } catch (error) {
         console.error("Error fetching place details:", error);
@@ -469,6 +555,7 @@ async function submitReview(token, placeId, reviewText, rating) {
             document.getElementById('review-form').reset(); 
             if (feedbackMessage) feedbackMessage.textContent = 'Success! Review submitted.';
             setTimeout(() => {
+                // After successful review, redirect back to the place details page
                 window.location.href = `place.html?id=${placeId}`;
             }, 1500);
         } else {
