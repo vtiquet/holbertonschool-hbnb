@@ -172,7 +172,7 @@ function setupLoginForm() {
                 } else {
                     // Failure: Parse JSON error message if possible
                     const errorData = await response.json().catch(() => ({}));
-                    const message = errorData.message || 'Login failed. Check your email and password.';
+                    const message = errorData.message || ' Check your email and password.';
                     
                     // Display error message
                     if (errorMessage) errorMessage.textContent = `Error: ${message}`;
@@ -642,11 +642,11 @@ async function submitReview(token, placeId, reviewText, rating) {
 // --- MAIN INITIALIZATION ---
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Determine which page we are on and call the relevant setup function
     const path = window.location.pathname;
 
     if (path.includes('login.html')) {
-        setupLoginForm();
+        // setupLoginForm() now calls setupPasswordToggle() internally.
+        setupLoginForm(); 
     } else if (path.includes('place.html')) {
         setupPlaceDetails();
     } else if (path.includes('add_review.html')) {
